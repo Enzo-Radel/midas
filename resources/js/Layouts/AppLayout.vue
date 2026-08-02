@@ -25,13 +25,13 @@ const sidebarOpen = ref(true);
 .main-content {
     flex: 1;
     padding: 2rem;
-    margin-left: 280px;
+    margin-left: calc(280px + 2rem);
     transition: margin-left 0.3s ease;
     overflow-y: auto;
 }
 
 .main-content.sidebar-closed {
-    margin-left: 80px;
+    margin-left: calc(80px + 2rem);
 }
 
 @media (max-width: 768px) {

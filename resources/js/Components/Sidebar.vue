@@ -1,5 +1,15 @@
 <script setup>
 import { ref } from 'vue';
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+import {
+    faGaugeHigh,
+    faSackDollar,
+    faChartLine,
+    faGear,
+    faChevronLeft,
+    faUser,
+    faCoins,
+} from '@fortawesome/free-solid-svg-icons';
 
 defineProps({
     modelValue: {
@@ -17,10 +27,10 @@ const toggleSidebar = () => {
 };
 
 const menuItems = [
-    { label: 'Dashboard', icon: '▦', href: '#' },
-    { label: 'Expenses', icon: '◆', href: '#' },
-    { label: 'Reports', icon: '▲', href: '#' },
-    { label: 'Settings', icon: '⚙', href: '#' },
+    { label: 'Dashboard', icon: faGaugeHigh, href: '#' },
+    { label: 'Expenses', icon: faSackDollar, href: '#' },
+    { label: 'Reports', icon: faChartLine, href: '#' },
+    { label: 'Settings', icon: faGear, href: '#' },
 ];
 </script>
 
@@ -28,24 +38,24 @@ const menuItems = [
     <aside class="sidebar" :class="{ 'sidebar-collapsed': !isOpen }">
         <div class="sidebar-header">
             <div class="logo">
-                <span class="logo-icon">M</span>
+                <span class="logo-icon"><FontAwesomeIcon :icon="faCoins" /></span>
                 <span v-if="isOpen" class="logo-text">Midas</span>
             </div>
             <button class="toggle-btn" @click="toggleSidebar" :title="isOpen ? 'Collapse' : 'Expand'" aria-label="Toggle sidebar">
-                <span class="chevron">›</span>
+                <FontAwesomeIcon class="chevron" :icon="faChevronLeft" />
             </button>
         </div>
 
         <nav class="sidebar-nav">
             <a v-for="item in menuItems" :key="item.label" :href="item.href" class="nav-item" :title="item.label">
-                <span class="nav-icon">{{ item.icon }}</span>
+                <span class="nav-icon"><FontAwesomeIcon :icon="item.icon" /></span>
                 <span v-if="isOpen" class="nav-label">{{ item.label }}</span>
             </a>
         </nav>
 
         <div class="sidebar-footer">
             <button class="user-btn" title="Open profile menu" aria-label="User profile">
-                <span class="user-avatar">U</span>
+                <span class="user-avatar"><FontAwesomeIcon :icon="faUser" /></span>
                 <span v-if="isOpen" class="user-name">Profile</span>
             </button>
         </div>
@@ -55,18 +65,18 @@ const menuItems = [
 <style scoped>
 .sidebar {
     position: fixed;
-    left: 0;
-    top: 0;
+    left: 1rem;
+    top: 1rem;
     width: 280px;
-    height: 100vh;
+    height: calc(100vh - 2rem);
     background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
     padding: 1rem;
     display: flex;
     flex-direction: column;
     transition: width 0.3s ease;
     z-index: 1000;
-    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
-    border-radius: 0 16px 16px 0;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    border-radius: 16px;
 }
 
 .sidebar-collapsed {
@@ -246,9 +256,8 @@ const menuItems = [
 
 @media (max-width: 768px) {
     .sidebar {
-        transform: translateX(-100%);
+        transform: translateX(calc(-100% - 1rem));
         position: fixed;
-        border-radius: 0;
     }
 
     .sidebar.active {

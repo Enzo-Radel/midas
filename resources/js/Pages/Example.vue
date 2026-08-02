@@ -1,5 +1,7 @@
 <script setup>
 import AppLayout from '../Layouts/AppLayout.vue';
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+import { faWallet, faChartPie, faArrowTrendUp } from '@fortawesome/free-solid-svg-icons';
 
 defineProps({
     message: {
@@ -18,21 +20,21 @@ defineProps({
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div class="card card-primary">
-                <div class="card-icon">◆</div>
+                <div class="card-icon"><FontAwesomeIcon :icon="faWallet" /></div>
                 <h2 class="card-title">Total Balance</h2>
                 <p class="card-value">$12,345.67</p>
                 <p class="card-desc">Across all accounts</p>
             </div>
 
             <div class="card card-info">
-                <div class="card-icon">▦</div>
+                <div class="card-icon"><FontAwesomeIcon :icon="faChartPie" /></div>
                 <h2 class="card-title">Monthly Expenses</h2>
                 <p class="card-value">$2,456.80</p>
                 <p class="card-desc">This month</p>
             </div>
 
             <div class="card card-success">
-                <div class="card-icon">▲</div>
+                <div class="card-icon"><FontAwesomeIcon :icon="faArrowTrendUp" /></div>
                 <h2 class="card-title">Savings Rate</h2>
                 <p class="card-value">32%</p>
                 <p class="card-desc">Year to date</p>
