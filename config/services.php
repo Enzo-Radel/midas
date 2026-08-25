@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    'brapi' => [
+        'token' => env('BRAPI_TOKEN'),
+    ],
+
+    'coingecko' => [
+        'api_key' => env('COINGECKO_API_KEY'),
+    ],
+
 ];
