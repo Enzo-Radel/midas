@@ -1,0 +1,60 @@
+name: Deploy homologação
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch a subir para midas-homolog.enzoradel.com.br'
+        required: true
+        default: 'main'
+      fresh_db:
+        description: 'Recriar o banco (migrate:fresh --seed)'
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: deploy-homolog
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: homolog
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.branch }}
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Build do frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Enviar assets compilados
+        uses: burnett01/rsync-deployments@7.0.1
+        with:
+          switches: -avzr --delete
+          path: public/build/
+          remote_path: /var/www/midas-homolog/public/build/
+          remote_host: ${{ secrets.SSH_HOST }}
+          remote_user: ${{ secrets.SSH_USER }}
+          remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
+          remote_port: ${{ secrets.SSH_PORT }}
+
+      - name: Rodar deploy no servidor
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            midas-deploy.sh homolog "${{ inputs.branch }}" ${{ inputs.fresh_db == 'true' && '--fresh' || '' }}

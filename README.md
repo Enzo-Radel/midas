@@ -71,6 +71,10 @@ php artisan serve
 
 *(Documentação da API será adicionada aqui — endpoints, autenticação e exemplos de uso.)*
 
+## Deploy
+
+Produção e homologação rodam em Apache + MySQL no servidor, com deploy disparado pelo GitHub Actions (`workflow_dispatch`), sem precisar de terminal. Ver [`docs/deploy.md`](docs/deploy.md) para a configuração do servidor e o dia a dia dos dois ambientes.
+
 ## Licença
 
 Projeto pessoal — uso livre.
