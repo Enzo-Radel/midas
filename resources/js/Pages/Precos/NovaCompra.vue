@@ -7,7 +7,7 @@ import AppLayout from '../../Layouts/AppLayout.vue';
 const unidades = [['kg', 'kg'], ['g', 'g'], ['L', 'L'], ['ml', 'ml'], ['un', 'un'], ['duzia', 'dúzia'], ['pacote', 'pacote']];
 
 let chaves = 0;
-const novaLinha = () => ({ chave: ++chaves, produto: '', quantidade: '', unidade: 'kg', unidades_por_pacote: '', preco: '', levei: true });
+const novaLinha = () => ({ chave: ++chaves, produto: '', quantidade: '', unidade: 'kg', unidades_por_pacote: '', preco: '', levei: true, promocao: false, preco_original: '' });
 
 const formulario = ref(null);
 const mercado = ref('');
@@ -40,6 +40,12 @@ async function sugerir(linha, q) {
     }
 }
 
+// Fecha a lista e descarta a consulta ainda pendente, para a resposta tardia não reabri-la.
+function fecharSugestoes() {
+    consulta++;
+    sugestoes.value = [];
+}
+
 function preencher(item, ultima) {
     item.quantidade = String(ultima.quantidade).replace('.', ',');
     item.unidade = ultima.unidade;
@@ -48,8 +54,7 @@ function preencher(item, ultima) {
 }
 
 function escolher(item, produto) {
-    consulta++;
-    sugestoes.value = [];
+    fecharSugestoes();
     item.produto = produto.nome;
     preencher(item, produto.ultima_compra);
 }
@@ -81,7 +86,7 @@ async function repetir() {
 }
 
 function remover(linha) {
-    sugestoes.value = [];
+    fecharSugestoes();
     itens.value.splice(linha, 1);
 }
 
@@ -124,6 +129,8 @@ async function salvar() {
                 unidade: item.unidade,
                 unidades_por_pacote: item.unidade === 'pacote' ? numero(item.unidades_por_pacote) : null,
                 preco_centavos: Math.round(numero(item.preco) * 100),
+                promocao: item.promocao,
+                preco_original_centavos: item.promocao && item.preco_original.trim() ? Math.round(numero(item.preco_original) * 100) : null,
             })),
         });
 
@@ -176,7 +183,7 @@ async function salvar() {
                             type="text"
                             autocomplete="off"
                             @input="sugerir(i, $event.target.value)"
-                            @blur="sugestoes = []"
+                            @blur="fecharSugestoes"
                         />
                         <span v-if="erro('produto', i)" class="error">{{ erro('produto', i) }}</span>
                     </label>
@@ -188,10 +195,17 @@ async function salvar() {
                     </ul>
                 </div>
 
-                <label class="levei">
-                    <input v-model="item.levei" name="levei" type="checkbox" />
-                    Levei
-                </label>
+                <div class="marcas">
+                    <label class="marca">
+                        <input v-model="item.levei" name="levei" type="checkbox" />
+                        Levei
+                    </label>
+
+                    <label class="marca">
+                        <input v-model="item.promocao" name="promocao" type="checkbox" />
+                        Promoção
+                    </label>
+                </div>
 
                 <div class="campos">
                     <label class="field">
@@ -226,6 +240,12 @@ async function salvar() {
                             @keydown.enter="proximaLinha(i)"
                         />
                         <span v-if="erro('preco_centavos', i)" class="error">{{ erro('preco_centavos', i) }}</span>
+                    </label>
+
+                    <label v-if="item.promocao" class="field">
+                        <span class="label">Preço original (R$)</span>
+                        <input v-model="item.preco_original" name="preco_original_centavos" class="input" type="text" inputmode="decimal" placeholder="22,90" />
+                        <span v-if="erro('preco_original_centavos', i)" class="error">{{ erro('preco_original_centavos', i) }}</span>
                     </label>
                 </div>
 
@@ -342,7 +362,13 @@ async function salvar() {
     color: #6b7280;
 }
 
-.levei {
+.marcas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+}
+
+.marca {
     display: flex;
     align-items: center;
     gap: 0.75rem;
@@ -352,7 +378,7 @@ async function salvar() {
     cursor: pointer;
 }
 
-.levei input {
+.marca input {
     width: 24px;
     height: 24px;
     accent-color: #6366f1;

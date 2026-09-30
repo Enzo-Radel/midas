@@ -59,8 +59,8 @@ describe('Precos/NovaCompra', () => {
             mercado: 'Atacadão',
             data: '2026-09-14',
             itens: [
-                { produto: 'Café', quantidade: 500, unidade: 'g', unidades_por_pacote: null, preco_centavos: 1890 },
-                { produto: 'Ovos', quantidade: 2, unidade: 'pacote', unidades_por_pacote: 6, preco_centavos: 900 },
+                { produto: 'Café', quantidade: 500, unidade: 'g', unidades_por_pacote: null, preco_centavos: 1890, promocao: false, preco_original_centavos: null },
+                { produto: 'Ovos', quantidade: 2, unidade: 'pacote', unidades_por_pacote: 6, preco_centavos: 900, promocao: false, preco_original_centavos: null },
             ],
         });
         expect(router.visit).toHaveBeenCalledWith('/precos');
@@ -130,6 +130,7 @@ describe('Precos/NovaCompra', () => {
         expect(campo(wrapper, 'unidade').element.value).toBe('kg');
         expect(campo(wrapper, 'preco_centavos').element.value).toBe('34,90');
         expect(wrapper.findAll('.sugestao')).toHaveLength(0);
+        expect(campo(wrapper, 'promocao').element.checked).toBe(false);
 
         await campo(wrapper, 'produto').setValue('o');
         await flushPromises();
@@ -143,6 +144,28 @@ describe('Precos/NovaCompra', () => {
         await salvar(wrapper);
 
         expect(axios.post.mock.calls[0][1].itens[0]).toMatchObject({ produto: 'Ovos', quantidade: 2, unidade: 'pacote', unidades_por_pacote: 6, preco_centavos: 1750 });
+    });
+
+    it('sugestões que chegam depois de sair do campo ou de remover a linha não reabrem a lista', async () => {
+        let resolver;
+        axios.get.mockImplementation(() => new Promise((resolve) => (resolver = resolve)));
+        const resposta = { data: contract('produtos.index').response };
+
+        const wrapper = mount(NovaCompra);
+        await campo(wrapper, 'produto').setValue('ca');
+        await campo(wrapper, 'produto').trigger('blur');
+        resolver(resposta);
+        await flushPromises();
+
+        expect(wrapper.findAll('.sugestao')).toHaveLength(0);
+
+        await wrapper.find('button.adicionar').trigger('click');
+        await campo(wrapper, 'produto', 1).setValue('ca');
+        await wrapper.findAll('button.remover')[0].trigger('click');
+        resolver(resposta);
+        await flushPromises();
+
+        expect(wrapper.findAll('.sugestao')).toHaveLength(0);
     });
 
     it('produto novo é enviado como digitado e não apaga as outras linhas', async () => {
@@ -221,6 +244,7 @@ describe('Precos/NovaCompra', () => {
                         'itens.1.preco_centavos': ['O campo preço pago deve ser maior que zero.'],
                         'itens.1.unidade': ['Este produto é vendido em kg.'],
                         'itens.1.unidades_por_pacote': ['Informe as unidades do pacote.'],
+                        'itens.1.preco_original_centavos': ['O campo preço original deve ser maior que zero.'],
                     },
                 },
             },
@@ -230,6 +254,7 @@ describe('Precos/NovaCompra', () => {
         await preencherLinha(wrapper, 0, cafe);
         await wrapper.find('button.adicionar').trigger('click');
         await campo(wrapper, 'unidade', 1).setValue('pacote');
+        await campo(wrapper, 'promocao', 1).setValue(true);
         await salvar(wrapper);
 
         const rotulo = (nome, linha = 0) => campo(wrapper, nome, linha).element.closest('label').textContent;
@@ -238,9 +263,48 @@ describe('Precos/NovaCompra', () => {
         expect(rotulo('preco_centavos', 1)).toContain('O campo preço pago deve ser maior que zero.');
         expect(rotulo('unidade', 1)).toContain('Este produto é vendido em kg.');
         expect(rotulo('unidades_por_pacote', 1)).toContain('Informe as unidades do pacote.');
+        expect(rotulo('preco_original_centavos', 1)).toContain('O campo preço original deve ser maior que zero.');
         expect(rotulo('preco_centavos', 0)).not.toContain('preço pago deve');
         expect(wrapper.text()).toContain('Adicione ao menos um item.');
         expect(router.visit).not.toHaveBeenCalled();
+    });
+
+    it('o controle Promoção começa desmarcado, abre o preço original opcional e desmarcar esconde o campo e envia null', async () => {
+        const wrapper = mount(NovaCompra);
+        await preencherCabecalho(wrapper);
+        await preencherLinha(wrapper, 0, cafe);
+
+        expect(campo(wrapper, 'promocao').element.checked).toBe(false);
+        expect(wrapper.find('[name=preco_original_centavos]').exists()).toBe(false);
+
+        await campo(wrapper, 'promocao').setValue(true);
+        expect(wrapper.text()).toContain('Preço original (R$)');
+        await campo(wrapper, 'preco_original_centavos').setValue('22,90');
+        await campo(wrapper, 'promocao').setValue(false);
+        expect(wrapper.find('[name=preco_original_centavos]').exists()).toBe(false);
+        await salvar(wrapper);
+
+        expectShape(axios.post.mock.calls[0][1], store.request);
+        expect(axios.post.mock.calls[0][1].itens[0]).toMatchObject({ promocao: false, preco_original_centavos: null });
+    });
+
+    it('promoção marcada envia o preço original em centavos, ou null quando não informado', async () => {
+        const wrapper = mount(NovaCompra);
+        await preencherCabecalho(wrapper);
+        await preencherLinha(wrapper, 0, cafe);
+        await wrapper.find('button.adicionar').trigger('click');
+        await preencherLinha(wrapper, 1, { ...cafe, produto: 'Leite' });
+        await campo(wrapper, 'promocao', 0).setValue(true);
+        await campo(wrapper, 'preco_original_centavos', 0).setValue('22,90');
+        await campo(wrapper, 'promocao', 1).setValue(true);
+        await salvar(wrapper);
+
+        const corpo = axios.post.mock.calls[0][1];
+        expectShape(corpo, store.request);
+        expect(corpo.itens).toMatchObject([
+            { promocao: true, preco_original_centavos: 2290 },
+            { promocao: true, preco_original_centavos: null },
+        ]);
     });
 
     it('monta e envia uma compra de 15 itens em uma requisição', async () => {
@@ -258,7 +322,7 @@ describe('Precos/NovaCompra', () => {
         const corpo = axios.post.mock.calls[0][1];
         expectShape(corpo, store.request);
         expect(corpo.itens).toHaveLength(15);
-        expect(corpo.itens[14]).toEqual({ produto: 'Produto 14', quantidade: 1, unidade: 'un', unidades_por_pacote: null, preco_centavos: 1500 });
+        expect(corpo.itens[14]).toEqual({ produto: 'Produto 14', quantidade: 1, unidade: 'un', unidades_por_pacote: null, preco_centavos: 1500, promocao: false, preco_original_centavos: null });
     });
 
     describe('repetir última compra', () => {
@@ -287,6 +351,7 @@ describe('Precos/NovaCompra', () => {
             expect(campo(wrapper, 'unidade').element.value).toBe('g');
             expect(campo(wrapper, 'preco_centavos').element.value).toBe('18,90');
             expect(campo(wrapper, 'levei').element.checked).toBe(true);
+            expect(campo(wrapper, 'promocao').element.checked).toBe(false);
         });
 
         it('mantém as linhas já digitadas, traz pacote preenchido e deixa tudo editável; a data continua a da tela', async () => {
@@ -352,6 +417,21 @@ describe('Precos/NovaCompra', () => {
 
             expect(campo(wrapper, 'preco_centavos', 1).element.closest('label').textContent).toContain('Preço inválido.');
             expect(campo(wrapper, 'preco_centavos', 0).element.closest('label').textContent).not.toContain('Preço inválido.');
+        });
+
+        it('mostra o erro de preço original na linha certa com linhas desmarcadas antes dela', async () => {
+            axios.post.mockRejectedValue({ response: { status: 422, data: { message: 'inválido', errors: { 'itens.0.preco_original_centavos': ['Preço original inválido.'] } } } });
+
+            const wrapper = mount(NovaCompra);
+            await preencherCabecalho(wrapper);
+            await preencherLinha(wrapper, 0, cafe);
+            await wrapper.find('button.adicionar').trigger('click');
+            await preencherLinha(wrapper, 1, { ...cafe, produto: 'Leite' });
+            await campo(wrapper, 'promocao', 1).setValue(true);
+            await campo(wrapper, 'levei', 0).setValue(false);
+            await salvar(wrapper);
+
+            expect(campo(wrapper, 'preco_original_centavos', 1).element.closest('label').textContent).toContain('Preço original inválido.');
         });
 
         it('avisa quando não há compra anterior e não muda as linhas', async () => {
