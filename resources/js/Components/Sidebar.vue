@@ -8,6 +8,7 @@ import {
     faGear,
     faChevronLeft,
     faUser,
+    faBars,
     faCoins,
     faTags,
 } from '@fortawesome/free-solid-svg-icons';
@@ -22,6 +23,7 @@ defineProps({
 defineEmits(['update:modelValue']);
 
 const isOpen = ref(true);
+const menuOpen = ref(false);
 
 const toggleSidebar = () => {
     isOpen.value = !isOpen.value;
@@ -37,7 +39,16 @@ const menuItems = [
 </script>
 
 <template>
-    <aside class="sidebar" :class="{ 'sidebar-collapsed': !isOpen }">
+    <button
+        class="menu-btn"
+        :aria-label="menuOpen ? 'Fechar menu' : 'Abrir menu'"
+        :aria-expanded="menuOpen"
+        @click="menuOpen = !menuOpen"
+    >
+        <FontAwesomeIcon :icon="faBars" />
+    </button>
+
+    <aside class="sidebar" :class="{ 'sidebar-collapsed': !isOpen, active: menuOpen }">
         <div class="sidebar-header">
             <div class="logo">
                 <span class="logo-icon"><FontAwesomeIcon :icon="faCoins" /></span>
@@ -256,7 +267,40 @@ const menuItems = [
     text-overflow: ellipsis;
 }
 
+.menu-btn {
+    display: none;
+}
+
 @media (max-width: 768px) {
+    .menu-btn {
+        position: fixed;
+        top: 1rem;
+        right: 1rem;
+        z-index: 1001;
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #6366f1;
+        border: none;
+        border-radius: 8px;
+        color: white;
+        font-size: 1.25rem;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transition: all 0.2s ease;
+    }
+
+    .menu-btn:hover {
+        background: #4f46e5;
+        transform: translateY(-2px);
+    }
+
+    .menu-btn:active {
+        transform: scale(0.98);
+    }
+
     .sidebar {
         transform: translateX(calc(-100% - 1rem));
         position: fixed;

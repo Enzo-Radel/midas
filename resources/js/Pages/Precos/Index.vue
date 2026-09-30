@@ -1,13 +1,27 @@
 <script setup>
-import { ref } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import axios from 'axios';
 import AppLayout from '../../Layouts/AppLayout.vue';
 
+const busca = ref('');
+const campo = ref(null);
 const produtos = ref([]);
+let consulta = 0;
 
-axios.get('/api/precos/produtos').then(({ data }) => {
-    produtos.value = data.produtos;
-});
+onMounted(() => campo.value.focus());
+
+watch(
+    busca,
+    async (q) => {
+        const atual = ++consulta;
+        const { data } = await axios.get('/api/precos/produtos', { params: { q } });
+
+        if (atual === consulta) {
+            produtos.value = data.produtos;
+        }
+    },
+    { immediate: true },
+);
 </script>
 
 <template>
@@ -16,6 +30,16 @@ axios.get('/api/precos/produtos').then(({ data }) => {
             <h1 class="page-title">Preços</h1>
             <a href="/precos/compras/nova" class="button">Registrar compra</a>
         </div>
+
+        <input
+            ref="campo"
+            v-model="busca"
+            type="search"
+            class="input"
+            placeholder="Buscar produto"
+            aria-label="Buscar produto"
+            autocomplete="off"
+        />
 
         <ul class="list">
             <li v-for="produto in produtos" :key="produto.id">
@@ -64,6 +88,30 @@ axios.get('/api/precos/produtos').then(({ data }) => {
 
 .button:active {
     transform: scale(0.98);
+}
+
+.input {
+    width: 100%;
+    min-height: 56px;
+    margin-bottom: 1rem;
+    padding: 0 1rem;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    color: #1f2937;
+    font: inherit;
+    font-size: 1.125rem;
+    transition: all 0.2s ease;
+}
+
+.input:hover {
+    border-color: #9ca3af;
+}
+
+.input:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
 .list {

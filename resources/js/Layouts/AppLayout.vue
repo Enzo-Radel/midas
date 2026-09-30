@@ -37,7 +37,7 @@ const sidebarOpen = ref(true);
 @media (max-width: 768px) {
     .main-content {
         margin-left: 0;
-        padding: 1.5rem;
+        padding: 5rem 1.5rem 1.5rem;
     }
 }
 </style>
