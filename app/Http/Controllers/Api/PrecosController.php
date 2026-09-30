@@ -18,10 +18,11 @@ class PrecosController extends Controller
     public function produtos(Request $request): JsonResponse
     {
         $q = $request->query('q');
-        $produtos = Produto::withCount('compras as total_compras')
+        $produtos = Produto::withCount('compras as total_compras')->with('ultimaCompra')
             ->when(filled($q), fn ($query) => $query
                 ->whereRaw("lower(nome) like ? escape '!'", ['%'.strtr(mb_strtolower($q), ['!' => '!!', '%' => '!%', '_' => '!_']).'%']))
             ->orderByDesc('total_compras')->orderByRaw('lower(nome)')->get();
+        $produtos->each(fn ($produto) => $produto->ultimaCompra->makeHidden(['id', 'produto_id', 'mercado_id', 'data']));
 
         return response()->json(['produtos' => $produtos]);
     }
@@ -74,34 +75,47 @@ class PrecosController extends Controller
     public function registrar(Request $request): JsonResponse
     {
         $dados = $request->validate([
-            'produto' => ['required', 'string', 'max:255'],
             'mercado' => ['required', 'string', 'max:255'],
             'data' => ['required', 'date_format:Y-m-d'],
-            'quantidade' => ['required', 'numeric', 'gt:0'],
-            'unidade' => ['required', Rule::in(array_keys(Compra::UNIDADES))],
-            'unidades_por_pacote' => ['required_if:unidade,pacote', 'nullable', 'integer', 'min:1'],
-            'preco_centavos' => ['required', 'integer', 'gt:0'],
+            'itens' => ['required', 'array'],
+            'itens.*.produto' => ['required', 'string', 'max:255'],
+            'itens.*.quantidade' => ['required', 'numeric', 'gt:0'],
+            'itens.*.unidade' => ['required', Rule::in(array_keys(Compra::UNIDADES))],
+            'itens.*.unidades_por_pacote' => ['required_if:itens.*.unidade,pacote', 'nullable', 'integer', 'min:1'],
+            'itens.*.preco_centavos' => ['required', 'integer', 'gt:0'],
         ]);
 
-        $produto = $this->buscarPorNome(Produto::class, $dados['produto']);
-        $base = $produto?->unidade_base;
-        if ($base && $base !== Compra::UNIDADES[$dados['unidade']][0]) {
-            throw ValidationException::withMessages([
-                'unidade' => "A unidade deve ser compatível com a do produto, que é medido em {$base}.",
-            ]);
+        // A unidade base de um produto vem da primeira compra dele, inclusive dentro do próprio lote.
+        $bases = [];
+        $erros = [];
+        foreach ($dados['itens'] as $i => $item) {
+            $familia = Compra::UNIDADES[$item['unidade']][0];
+            $base = $bases[mb_strtolower($item['produto'])] ??=
+                $this->buscarPorNome(Produto::class, $item['produto'])?->unidade_base ?? $familia;
+            if ($base !== $familia) {
+                $erros["itens.{$i}.unidade"] = "A unidade deve ser compatível com a do produto, que é medido em {$base}.";
+            }
+        }
+        if ($erros) {
+            throw ValidationException::withMessages($erros);
         }
 
-        $produto ??= Produto::create(['nome' => $dados['produto']]);
         $mercado = $this->buscarPorNome(Mercado::class, $dados['mercado'])
             ?? Mercado::create(['nome' => $dados['mercado']]);
 
-        $compra = Compra::create([
-            ...Arr::except($dados, ['produto', 'mercado']),
-            'produto_id' => $produto->id,
-            'mercado_id' => $mercado->id,
-        ]);
+        $compras = array_map(function ($item) use ($dados, $mercado) {
+            $produto = $this->buscarPorNome(Produto::class, $item['produto'])
+                ?? Produto::create(['nome' => $item['produto']]);
 
-        return response()->json(['compra' => $compra], 201);
+            return Compra::create([
+                ...Arr::except($item, 'produto'),
+                'data' => $dados['data'],
+                'produto_id' => $produto->id,
+                'mercado_id' => $mercado->id,
+            ]);
+        }, $dados['itens']);
+
+        return response()->json(['compras' => $compras], 201);
     }
 
     private function buscarPorNome(string $modelo, string $nome): ?Model

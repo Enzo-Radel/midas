@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Produto extends Model
 {
@@ -15,6 +16,11 @@ class Produto extends Model
     public function compras(): HasMany
     {
         return $this->hasMany(Compra::class);
+    }
+
+    public function ultimaCompra(): HasOne
+    {
+        return $this->hasOne(Compra::class)->latestOfMany(['data', 'id']);
     }
 
     /** Definida pela primeira compra do produto. */

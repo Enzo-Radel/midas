@@ -6,6 +6,7 @@ use App\Models\Compra;
 use App\Models\Mercado;
 use App\Models\Produto;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Arr;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia;
 use Tests\Support\AssertsContract;
@@ -16,9 +17,33 @@ class PrecosTest extends TestCase
     use AssertsContract;
     use RefreshDatabase;
 
+    private function item(array $campos = []): array
+    {
+        return [...$this->contractRequest('compras.store')['itens'][0], ...$campos];
+    }
+
+    private function lote(array $itens, array $topo = []): TestResponse
+    {
+        $corpo = Arr::except($this->contractRequest('compras.store'), 'itens');
+
+        return $this->postJson('/api/precos/compras', [...$corpo, ...$topo, 'itens' => $itens]);
+    }
+
+    /** Registra um único item; `mercado` e `data` vão no topo do lote, o resto no item. */
     private function registrar(array $campos = []): TestResponse
     {
-        return $this->postJson('/api/precos/compras', [...$this->contractRequest('compras.store'), ...$campos]);
+        return $this->lote([$this->item(Arr::except($campos, ['mercado', 'data']))], Arr::only($campos, ['mercado', 'data']));
+    }
+
+    private function erro(TestResponse $response, string $chave): ?string
+    {
+        return $response->json('errors')[$chave][0] ?? null;
+    }
+
+    /** @return array{int, int, int} */
+    private function contagens(): array
+    {
+        return [Produto::count(), Mercado::count(), Compra::count()];
     }
 
     public function test_registra_compra_no_formato_do_contrato(): void
@@ -112,13 +137,13 @@ class PrecosTest extends TestCase
     public function test_consultar_nao_cria_nem_altera_registros(): void
     {
         $this->registrar();
-        $antes = [Produto::count(), Mercado::count(), Compra::count()];
+        $antes = $this->contagens();
 
         $this->getJson('/api/precos/produtos?q=caf');
         $this->getJson('/api/precos/produtos?q=inexistente');
         $this->getJson('/api/precos/produtos');
 
-        $this->assertSame($antes, [Produto::count(), Mercado::count(), Compra::count()]);
+        $this->assertSame($antes, $this->contagens());
     }
 
     public function test_produto_inexistente_retorna_404(): void
@@ -143,41 +168,54 @@ class PrecosTest extends TestCase
 
     public function test_rejeita_campos_invalidos_com_422(): void
     {
-        $invalidos = [
-            'produto' => [null, '   ', str_repeat('a', 256)],
+        $topo = [
             'mercado' => [null, '   ', str_repeat('a', 256)],
             'data' => [null, '14/09/2026', '2026-13-45'],
+        ];
+        $itens = [
+            'produto' => [null, '   ', str_repeat('a', 256)],
             'quantidade' => [null, 'abc', 0, -1],
             'unidade' => [null, 'xícara'],
             'unidades_por_pacote' => [null, 0, 'abc'],
             'preco_centavos' => [null, 'abc', 0, -5, 18.9],
         ];
 
-        foreach ($invalidos as $campo => $valores) {
+        foreach ($topo as $campo => $valores) {
             foreach ($valores as $valor) {
-                $this->registrar([$campo => $valor, ...($campo === 'unidades_por_pacote' ? ['unidade' => 'pacote'] : [])])
-                    ->assertUnprocessable()
-                    ->assertJsonValidationErrors($campo);
+                $this->assertArrayHasKey($campo, $this->registrar([$campo => $valor])->assertUnprocessable()->json('errors'));
             }
         }
 
-        $this->assertDatabaseCount('compras', 0);
+        foreach ($itens as $campo => $valores) {
+            foreach ($valores as $valor) {
+                $response = $this->registrar([$campo => $valor, ...($campo === 'unidades_por_pacote' ? ['unidade' => 'pacote'] : [])]);
+
+                $this->assertArrayHasKey("itens.0.{$campo}", $response->assertUnprocessable()->json('errors'));
+            }
+        }
+
+        $this->assertSame([0, 0, 0], $this->contagens());
     }
 
     public function test_mensagens_de_validacao_saem_em_portugues_com_nomes_legiveis(): void
     {
-        $this->registrar(['produto' => null])
-            ->assertUnprocessable()
-            ->assertJsonPath('errors.produto.0', 'O campo produto é obrigatório.');
-
-        $this->registrar(['preco_centavos' => 0])
-            ->assertJsonPath('errors.preco_centavos.0', 'O campo preço pago deve ser maior que zero.');
-
-        $this->registrar(['quantidade' => 0])
-            ->assertJsonPath('errors.quantidade.0', 'O campo quantidade deve ser maior que zero.');
+        $this->assertSame('O campo produto é obrigatório.', $this->erro($this->registrar(['produto' => null]), 'itens.0.produto'));
+        $this->assertSame('O campo preço pago deve ser maior que zero.', $this->erro($this->registrar(['preco_centavos' => 0]), 'itens.0.preco_centavos'));
+        $this->assertSame('O campo quantidade deve ser maior que zero.', $this->erro($this->registrar(['quantidade' => 0]), 'itens.0.quantidade'));
+        $this->assertSame('O campo mercado é obrigatório.', $this->erro($this->registrar(['mercado' => null]), 'mercado'));
 
         $this->registrar(['produto' => null, 'mercado' => null])
-            ->assertJsonPath('message', 'O campo produto é obrigatório. (e mais 1 erro)');
+            ->assertJsonPath('message', 'O campo mercado é obrigatório. (e mais 1 erro)');
+    }
+
+    public function test_itens_vazio_ou_ausente_pede_ao_menos_um_item(): void
+    {
+        $this->assertSame('Adicione ao menos um item.', $this->erro($this->lote([]), 'itens'));
+
+        $corpo = Arr::except($this->contractRequest('compras.store'), 'itens');
+        $response = $this->postJson('/api/precos/compras', $corpo);
+
+        $this->assertSame('Adicione ao menos um item.', $this->erro($response->assertUnprocessable(), 'itens'));
     }
 
     public function test_calcula_o_preco_por_unidade_base(): void
@@ -195,7 +233,7 @@ class PrecosTest extends TestCase
             $id = $this->registrar([
                 'produto' => $produto, 'quantidade' => $quantidade, 'unidade' => $unidade,
                 'unidades_por_pacote' => $porPacote, 'preco_centavos' => $preco,
-            ])->assertCreated()->json('compra.produto_id');
+            ])->assertCreated()->json('compras.0.produto_id');
 
             $response = $this->getJson("/api/precos/produtos/{$id}");
 
@@ -205,32 +243,105 @@ class PrecosTest extends TestCase
         }
     }
 
-    public function test_rejeita_unidade_de_outra_familia_que_a_do_produto(): void
+    public function test_rejeita_unidade_de_outra_familia_que_a_do_produto_e_nao_salva_nada(): void
     {
-        $this->registrar(['produto' => 'Ovos', 'unidade' => 'un']);
         $this->registrar(['produto' => 'Café', 'unidade' => 'g']);
-        $mercados = Mercado::count();
+        $antes = $this->contagens();
 
-        $this->registrar(['produto' => 'ovos', 'mercado' => 'Novo', 'unidade' => 'g'])
-            ->assertUnprocessable()
-            ->assertJsonPath('errors.unidade.0', 'A unidade deve ser compatível com a do produto, que é medido em un.');
-        $this->registrar(['produto' => 'Café', 'unidade' => 'duzia'])
-            ->assertJsonPath('errors.unidade.0', 'A unidade deve ser compatível com a do produto, que é medido em kg.');
+        $response = $this->lote([
+            $this->item(['produto' => 'Arroz', 'unidade' => 'kg']),
+            $this->item(['produto' => 'café', 'unidade' => 'un']),
+            $this->item(['produto' => 'Leite', 'unidade' => 'L']),
+        ], ['mercado' => 'Mercado novo'])->assertUnprocessable();
 
-        $this->assertDatabaseCount('compras', 2);
-        $this->assertSame($mercados, Mercado::count());
+        $this->assertSame('A unidade deve ser compatível com a do produto, que é medido em kg.', $this->erro($response, 'itens.1.unidade'));
+        $this->assertSame($antes, $this->contagens());
+    }
+
+    public function test_rejeita_unidades_de_familias_diferentes_para_o_mesmo_produto_no_mesmo_lote(): void
+    {
+        $response = $this->lote([
+            $this->item(['produto' => 'Ovos', 'unidade' => 'un']),
+            $this->item(['produto' => 'ovos', 'unidade' => 'g']),
+        ])->assertUnprocessable();
+
+        $this->assertSame('A unidade deve ser compatível com a do produto, que é medido em un.', $this->erro($response, 'itens.1.unidade'));
+        $this->assertSame([0, 0, 0], $this->contagens());
     }
 
     public function test_unidades_por_pacote_so_e_obrigatorio_para_pacote(): void
     {
-        $this->registrar(['unidade' => 'pacote', 'unidades_por_pacote' => null])
-            ->assertUnprocessable()
-            ->assertJsonPath('errors.unidades_por_pacote.0', 'O campo unidades por pacote é obrigatório quando unidade é pacote.');
-        $this->registrar(['unidade' => 'pacote', 'unidades_por_pacote' => 0])
-            ->assertJsonPath('errors.unidades_por_pacote.0', 'O campo unidades por pacote deve ser no mínimo 1.');
+        $this->assertSame(
+            'O campo unidades por pacote é obrigatório quando unidade é pacote.',
+            $this->erro($this->registrar(['unidade' => 'pacote', 'unidades_por_pacote' => null]), 'itens.0.unidades_por_pacote'),
+        );
+        $this->assertSame(
+            'O campo unidades por pacote deve ser no mínimo 1.',
+            $this->erro($this->registrar(['unidade' => 'pacote', 'unidades_por_pacote' => 0]), 'itens.0.unidades_por_pacote'),
+        );
 
         $this->registrar(['produto' => 'Biscoito', 'unidade' => 'pacote', 'unidades_por_pacote' => 6])->assertCreated();
         $this->registrar(['unidade' => 'kg', 'unidades_por_pacote' => null])->assertCreated();
+    }
+
+    public function test_registra_varios_itens_na_ordem_enviada_reaproveitando_produto_e_mercado(): void
+    {
+        $this->registrar();
+
+        $response = $this->lote([
+            $this->item(['produto' => 'café']),
+            $this->item(['produto' => 'Arroz', 'quantidade' => 1, 'unidade' => 'kg', 'preco_centavos' => 600]),
+            $this->item(['produto' => 'Biscoito', 'quantidade' => 1, 'unidade' => 'pacote', 'unidades_por_pacote' => 6, 'preco_centavos' => 900]),
+        ], ['mercado' => 'ATACADÃO']);
+
+        $this->assertContract($response, 'compras.store');
+        $this->assertCount(3, $response->json('compras'));
+        $this->assertSame([1, 2, 3], array_column($response->json('compras'), 'produto_id'));
+        $this->assertSame([6, 600, 900], [$response->json('compras.2.unidades_por_pacote'), $response->json('compras.1.preco_centavos'), $response->json('compras.2.preco_centavos')]);
+        $this->assertSame([3, 1, 4], $this->contagens());
+    }
+
+    public function test_mesmo_produto_duas_vezes_no_lote_vale_duas_compras(): void
+    {
+        $this->lote([$this->item(), $this->item(['preco_centavos' => 2000])])->assertCreated();
+
+        $this->assertSame([1, 1, 2], $this->contagens());
+    }
+
+    public function test_aceita_lote_de_15_itens(): void
+    {
+        $itens = array_map(fn ($n) => $this->item(['produto' => "Produto {$n}"]), range(1, 15));
+
+        $this->assertCount(15, $this->lote($itens)->assertCreated()->json('compras'));
+        $this->assertSame([15, 1, 15], $this->contagens());
+    }
+
+    public function test_tudo_ou_nada_um_item_invalido_nao_salva_nenhum(): void
+    {
+        $response = $this->lote([
+            $this->item(['produto' => 'Arroz']),
+            $this->item(['produto' => 'Feijão', 'preco_centavos' => 0]),
+            $this->item(['produto' => 'Leite']),
+        ], ['mercado' => 'Mercado novo'])->assertUnprocessable();
+
+        $this->assertSame('O campo preço pago deve ser maior que zero.', $this->erro($response, 'itens.1.preco_centavos'));
+        $this->assertSame([0, 0, 0], $this->contagens());
+    }
+
+    public function test_index_traz_a_ultima_compra_de_cada_produto(): void
+    {
+        $this->registrar(['data' => '2026-09-10', 'quantidade' => 500, 'unidade' => 'g', 'preco_centavos' => 1890]);
+        $this->registrar(['data' => '2026-09-20', 'quantidade' => 1, 'unidade' => 'kg', 'preco_centavos' => 3490]);
+        $this->registrar(['data' => '2026-09-20', 'quantidade' => 2.5, 'unidade' => 'kg', 'preco_centavos' => 8000]);
+        $this->registrar(['data' => '2026-09-01', 'produto' => 'Biscoito', 'quantidade' => 2, 'unidade' => 'pacote', 'unidades_por_pacote' => 6, 'preco_centavos' => 900]);
+
+        $response = $this->getJson('/api/precos/produtos');
+        $ultimas = array_column($response->json('produtos'), 'ultima_compra', 'nome');
+
+        $this->assertContract($response, 'produtos.index');
+        $this->assertSame(2.5, $ultimas['Café']['quantidade']);
+        $this->assertSame(['kg', null, 8000], [$ultimas['Café']['unidade'], $ultimas['Café']['unidades_por_pacote'], $ultimas['Café']['preco_centavos']]);
+        $this->assertSame(6, $ultimas['Biscoito']['unidades_por_pacote']);
     }
 
     public function test_resumo_do_preco_por_unidade_base(): void
