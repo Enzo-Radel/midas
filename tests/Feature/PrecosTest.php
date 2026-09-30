@@ -130,6 +130,9 @@ class PrecosTest extends TestCase
 
         $this->registrar(['quantidade' => 0])
             ->assertJsonPath('errors.quantidade.0', 'O campo quantidade deve ser maior que zero.');
+
+        $this->registrar(['produto' => null, 'mercado' => null])
+            ->assertJsonPath('message', 'O campo produto é obrigatório. (e mais 1 erro)');
     }
 
     public function test_paginas_renderizam_o_componente_com_as_props_do_contrato(): void
