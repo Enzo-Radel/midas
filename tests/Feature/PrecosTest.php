@@ -298,6 +298,48 @@ class PrecosTest extends TestCase
         $this->assertSame(['inicio' => '2026-08-01', 'fim' => '2026-09-20'], $resumo['periodo']);
     }
 
+    public function test_compara_a_mediana_por_mercado_usando_so_as_compras_de_cada_um(): void
+    {
+        $this->registrar(['mercado' => 'Mercado do bairro', 'quantidade' => 1, 'unidade' => 'kg', 'preco_centavos' => 3910]);
+        $this->registrar(['mercado' => 'Atacadão', 'quantidade' => 500, 'unidade' => 'g', 'preco_centavos' => 1860]); // 3720/kg
+        $this->registrar(['mercado' => 'Atacadão', 'quantidade' => 1, 'unidade' => 'kg', 'preco_centavos' => 3720]);
+
+        $response = $this->getJson('/api/precos/produtos/1');
+        $mercados = $response->json('mercados');
+
+        $this->assertContract($response, 'produtos.show');
+        $this->assertSame(['Atacadão', 'Mercado do bairro'], array_column(array_column($mercados, 'mercado'), 'nome'));
+        $this->assertEquals([3720, 3910], array_column($mercados, 'mediana_centavos'));
+        $this->assertSame([2, 1], array_column($mercados, 'contagem'));
+        $this->assertEquals([0, 5.1], array_column($mercados, 'diferenca_percentual'));
+        $this->assertSame(3, $response->json('resumo.contagem'));
+        $this->assertCount(3, $response->json('compras'));
+    }
+
+    public function test_produto_de_um_so_mercado_tem_uma_linha_sem_diferenca(): void
+    {
+        $this->registrar();
+        $this->registrar();
+
+        $mercados = $this->getJson('/api/precos/produtos/1')->json('mercados');
+
+        $this->assertCount(1, $mercados);
+        $this->assertSame(2, $mercados[0]['contagem']);
+        $this->assertNull($mercados[0]['diferenca_percentual']);
+    }
+
+    public function test_mercados_ordenados_pela_mediana_e_empate_pelo_nome(): void
+    {
+        foreach ([['B', 1000], ['A', 1000], ['C', 500]] as [$mercado, $preco]) {
+            $this->registrar(['mercado' => $mercado, 'quantidade' => 1, 'unidade' => 'kg', 'preco_centavos' => $preco]);
+        }
+
+        $mercados = $this->getJson('/api/precos/produtos/1')->json('mercados');
+
+        $this->assertSame(['C', 'A', 'B'], array_column(array_column($mercados, 'mercado'), 'nome'));
+        $this->assertEquals([0, 100, 100], array_column($mercados, 'diferenca_percentual'));
+    }
+
     public function test_paginas_renderizam_o_componente_com_as_props_do_contrato(): void
     {
         foreach ($this->contract('paginas') as $rota => $pagina) {

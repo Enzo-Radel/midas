@@ -32,16 +32,31 @@ class PrecosController extends Controller
             ->orderByDesc('data')->orderByDesc('id')->get()
             ->makeHidden(['produto_id', 'mercado_id'])->append('preco_base_centavos');
 
-        $precos = $compras->pluck('preco_base_centavos');
+        $mediana = fn ($lista) => round($lista->pluck('preco_base_centavos')->median(), 2);
         $ultima = $compras->first();
+
+        $mercados = $compras->groupBy('mercado_id')
+            ->map(fn ($lista) => [
+                'mercado' => $lista->first()->mercado,
+                'mediana_centavos' => $mediana($lista),
+                'contagem' => $lista->count(),
+            ])
+            ->sort(fn ($a, $b) => [$a['mediana_centavos'], $a['mercado']->nome] <=> [$b['mediana_centavos'], $b['mercado']->nome])
+            ->values();
+        $menor = $mercados->first()['mediana_centavos'];
+        $mercados = $mercados->map(fn ($m) => [
+            ...$m,
+            'diferenca_percentual' => $mercados->count() > 1 ? round(($m['mediana_centavos'] - $menor) / $menor * 100, 1) : null,
+        ]);
 
         return response()->json([
             'produto' => $produto->append('unidade_base'),
             'compras' => $compras,
+            'mercados' => $mercados,
             'resumo' => [
-                'mediana_centavos' => round($precos->median(), 2),
-                'minimo_centavos' => $precos->min(),
-                'maximo_centavos' => $precos->max(),
+                'mediana_centavos' => $mediana($compras),
+                'minimo_centavos' => $compras->min('preco_base_centavos'),
+                'maximo_centavos' => $compras->max('preco_base_centavos'),
                 'contagem' => $compras->count(),
                 'ultima' => [
                     'preco_base_centavos' => $ultima->preco_base_centavos,
