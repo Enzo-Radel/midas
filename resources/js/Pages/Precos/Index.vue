@@ -29,7 +29,10 @@ watch(
     <AppLayout>
         <div class="page-header">
             <h1 class="page-title">Preços</h1>
-            <a href="/precos/compras/nova" class="button">Registrar compra</a>
+            <div class="acoes">
+                <a href="/precos/diferencas" class="button button-secondary">Diferenças entre mercados</a>
+                <a href="/precos/compras/nova" class="button">Registrar compra</a>
+            </div>
         </div>
 
         <input
@@ -65,6 +68,12 @@ watch(
     font-size: 2rem;
     font-weight: 700;
     color: #1f2937;
+}
+
+.acoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
 }
 
 .button {
@@ -113,6 +122,17 @@ watch(
     outline: none;
     border-color: #6366f1;
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.button-secondary {
+    background-color: white;
+    border: 1px solid #6366f1;
+    color: #6366f1;
+}
+
+.button-secondary:hover {
+    background-color: #eef2ff;
+    box-shadow: none;
 }
 
 .list {

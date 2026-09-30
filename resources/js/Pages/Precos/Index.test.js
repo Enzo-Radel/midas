@@ -28,6 +28,7 @@ describe('Precos/Index', () => {
             ['Leite Piracanjuba', '/precos/produtos/2'],
         ]);
         expect(wrapper.find('a[href="/precos/compras/nova"]').exists()).toBe(true);
+        expect(wrapper.find('a[href="/precos/diferencas"]').text()).toBe('Diferenças entre mercados');
         wrapper.unmount();
     });
 

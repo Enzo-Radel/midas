@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import axios from 'axios';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import { nomeExibido } from '../../lib/nomeExibido';
+import { percentual, reais } from '../../lib/formatos';
 
 const props = defineProps({
     produtoId: {
@@ -26,11 +27,9 @@ axios.get(`/api/precos/produtos/${props.produtoId}`).then(({ data }) => {
 const data = (iso) => iso.split('-').reverse().join('/');
 const quantidade = (c) =>
     `${c.quantidade.toLocaleString('pt-BR')} ${c.unidade === 'duzia' ? 'dúzia' : c.unidade}${c.unidades_por_pacote ? ` (${c.unidades_por_pacote} un)` : ''}`;
-const reais = (centavos) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(centavos / 100);
 const contagem = (n, emPromocao = 0) =>
     `${n} ${n === 1 ? 'compra' : 'compras'}${emPromocao === 0 ? '' : n === 1 ? ', em promoção' : `, das quais ${emPromocao} em promoção`}`;
-const diferenca = (percentual) =>
-    percentual === null ? '' : percentual === 0 ? 'melhor' : `+${percentual.toLocaleString('pt-BR', { minimumFractionDigits: 1 })}%`;
+const diferenca = (valor) => (valor === null ? '' : valor === 0 ? 'melhor' : percentual(valor));
 const porBase = (centavos) => `${reais(centavos)}/${produto.value.unidade_base}`;
 </script>
 
