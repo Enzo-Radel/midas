@@ -1,0 +1,17 @@
+{
+    "request": null,
+    "status": 200,
+    "response": {
+        "produto": { "id": 1, "nome": "Café" },
+        "compras": [
+            {
+                "id": 3,
+                "data": "2026-09-14",
+                "mercado": { "id": 1, "nome": "Atacadão" },
+                "quantidade": 500,
+                "unidade": "g",
+                "preco_centavos": 1890
+            }
+        ]
+    }
+}

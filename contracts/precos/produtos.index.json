@@ -1,0 +1,9 @@
+{
+    "request": null,
+    "status": 200,
+    "response": {
+        "produtos": [
+            { "id": 1, "nome": "Café" }
+        ]
+    }
+}
