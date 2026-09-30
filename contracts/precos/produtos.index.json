@@ -6,7 +6,13 @@
             {
                 "id": 1,
                 "nome": "Café",
-                "total_compras": 4
+                "total_compras": 4,
+                "ultima_compra": {
+                    "quantidade": 500,
+                    "unidade": "g",
+                    "unidades_por_pacote": null,
+                    "preco_centavos": 1890
+                }
             }
         ]
     }

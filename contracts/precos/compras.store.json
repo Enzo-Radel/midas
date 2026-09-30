@@ -1,24 +1,30 @@
 {
     "request": {
-        "produto": "Café",
         "mercado": "Atacadão",
         "data": "2026-09-14",
-        "quantidade": 500,
-        "unidade": "g",
-        "unidades_por_pacote": null,
-        "preco_centavos": 1890
+        "itens": [
+            {
+                "produto": "Café",
+                "quantidade": 500,
+                "unidade": "g",
+                "unidades_por_pacote": null,
+                "preco_centavos": 1890
+            }
+        ]
     },
     "status": 201,
     "response": {
-        "compra": {
-            "id": 3,
-            "produto_id": 1,
-            "mercado_id": 1,
-            "data": "2026-09-14",
-            "quantidade": 500,
-            "unidade": "g",
-            "unidades_por_pacote": null,
-            "preco_centavos": 1890
-        }
+        "compras": [
+            {
+                "id": 3,
+                "produto_id": 1,
+                "mercado_id": 1,
+                "data": "2026-09-14",
+                "quantidade": 500,
+                "unidade": "g",
+                "unidades_por_pacote": null,
+                "preco_centavos": 1890
+            }
+        ]
     }
 }
