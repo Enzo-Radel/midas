@@ -9,6 +9,7 @@ import {
     faChevronLeft,
     faUser,
     faCoins,
+    faTags,
 } from '@fortawesome/free-solid-svg-icons';
 
 defineProps({
@@ -28,6 +29,7 @@ const toggleSidebar = () => {
 
 const menuItems = [
     { label: 'Dashboard', icon: faGaugeHigh, href: '#' },
+    { label: 'Preços', icon: faTags, href: '/precos' },
     { label: 'Expenses', icon: faSackDollar, href: '#' },
     { label: 'Reports', icon: faChartLine, href: '#' },
     { label: 'Settings', icon: faGear, href: '#' },

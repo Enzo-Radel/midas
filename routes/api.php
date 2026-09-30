@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AcoesFiisController;
 use App\Http\Controllers\Api\CriptoController;
+use App\Http\Controllers\Api\PrecosController;
 use App\Http\Controllers\Api\RendaFixaController;
 use Illuminate\Support\Facades\Route;
 
@@ -24,4 +25,10 @@ Route::prefix('cripto')->group(function () {
     Route::get('/precos', [CriptoController::class, 'precos']);
     Route::get('/binance/{par}', [CriptoController::class, 'binance']);
     Route::get('/{moeda}/historico', [CriptoController::class, 'historico']);
+});
+
+Route::prefix('precos')->group(function () {
+    Route::get('/produtos', [PrecosController::class, 'produtos']);
+    Route::get('/produtos/{produto}', [PrecosController::class, 'produto']);
+    Route::post('/compras', [PrecosController::class, 'registrar']);
 });
