@@ -60,4 +60,50 @@ describe('Precos/Produto', () => {
         expect(linhas[1]).toContain('2 pacote (6 un)');
         expect(linhas[1]).toContain('R$ 1,50/un');
     });
+
+    describe('resumo', () => {
+        const resumoDe = async (resposta) => {
+            axios.get.mockResolvedValue({ data: resposta });
+            const wrapper = mount(Produto, { props: { produtoId: 1 } });
+            await flushPromises();
+
+            return wrapper;
+        };
+        const texto = (wrapper, seletor) => wrapper.find(seletor).text().replace(/\s+/g, ' ');
+
+        it('mostra mediana, faixa, última compra, contagem e período formatados, acima do histórico', async () => {
+            const resposta = contract('produtos.show').response;
+            resposta.resumo.ultima.preco_base_centavos = 3490;
+            resposta.resumo.ultima.mercado.nome = 'Mercado Central';
+            const wrapper = await resumoDe(resposta);
+
+            expect(texto(wrapper, '.mediana')).toBe('R$ 37,80/kg');
+            expect(texto(wrapper, '.faixa')).toContain('R$ 34,90 a R$ 39,10/kg');
+            expect(texto(wrapper, '.ultima')).toContain('R$ 34,90/kg');
+            expect(texto(wrapper, '.ultima')).toContain('Mercado Central');
+            expect(texto(wrapper, '.ultima')).toContain('14/09/2026');
+            expect(texto(wrapper, '.contagem')).toBe('3 compras');
+            expect(texto(wrapper, '.periodo')).toContain('19/07/2026 a 14/09/2026');
+            expect(wrapper.find('.resumo').element.compareDocumentPosition(wrapper.find('ul').element)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+            expect(wrapper.findAll('li')).toHaveLength(1);
+        });
+
+        it('renderiza uma única compra com "1 compra" e o período com uma data só', async () => {
+            const resposta = contract('produtos.show').response;
+            resposta.resumo = {
+                mediana_centavos: 3780,
+                minimo_centavos: 3780,
+                maximo_centavos: 3780,
+                contagem: 1,
+                ultima: resposta.resumo.ultima,
+                periodo: { inicio: '2026-09-14', fim: '2026-09-14' },
+            };
+            const wrapper = await resumoDe(resposta);
+
+            expect(texto(wrapper, '.mediana')).toBe('R$ 37,80/kg');
+            expect(texto(wrapper, '.contagem')).toBe('1 compra');
+            expect(texto(wrapper, '.periodo')).toContain('14/09/2026');
+            expect(texto(wrapper, '.periodo')).not.toContain(' a ');
+        });
+    });
 });

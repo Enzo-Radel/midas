@@ -12,22 +12,40 @@ const props = defineProps({
 
 const produto = ref(null);
 const compras = ref([]);
+const resumo = ref(null);
 
 axios.get(`/api/precos/produtos/${props.produtoId}`).then(({ data }) => {
     produto.value = data.produto;
     compras.value = data.compras;
+    resumo.value = data.resumo;
 });
 
 const data = (iso) => iso.split('-').reverse().join('/');
 const quantidade = (c) =>
     `${c.quantidade.toLocaleString('pt-BR')} ${c.unidade === 'duzia' ? 'dúzia' : c.unidade}${c.unidades_por_pacote ? ` (${c.unidades_por_pacote} un)` : ''}`;
 const reais = (centavos) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(centavos / 100);
+const porBase = (centavos) => `${reais(centavos)}/${produto.value.unidade_base}`;
 </script>
 
 <template>
     <AppLayout>
         <template v-if="produto">
             <h1 class="page-title">{{ produto.nome }}</h1>
+
+            <section class="resumo">
+                <p class="mediana">{{ porBase(resumo.mediana_centavos) }}</p>
+                <p class="faixa">
+                    Faixa: {{ reais(resumo.minimo_centavos) }} a {{ porBase(resumo.maximo_centavos) }}
+                </p>
+                <p class="ultima">
+                    Última compra: {{ porBase(resumo.ultima.preco_base_centavos) }} em {{ resumo.ultima.mercado.nome }},
+                    {{ data(resumo.ultima.data) }}
+                </p>
+                <p class="contagem">{{ resumo.contagem }} {{ resumo.contagem === 1 ? 'compra' : 'compras' }}</p>
+                <p class="periodo">
+                    Período: {{ data(resumo.periodo.inicio) }}<template v-if="resumo.periodo.inicio !== resumo.periodo.fim"> a {{ data(resumo.periodo.fim) }}</template>
+                </p>
+            </section>
 
             <ul class="list">
                 <li v-for="compra in compras" :key="compra.id" class="card">
@@ -38,7 +56,7 @@ const reais = (centavos) => new Intl.NumberFormat('pt-BR', { style: 'currency', 
                     </div>
                     <div class="precos">
                         <span class="preco">{{ reais(compra.preco_centavos) }}</span>
-                        <span class="preco-base">{{ reais(compra.preco_base_centavos) }}/{{ produto.unidade_base }}</span>
+                        <span class="preco-base">{{ porBase(compra.preco_base_centavos) }}</span>
                     </div>
                 </li>
             </ul>
@@ -52,6 +70,27 @@ const reais = (centavos) => new Intl.NumberFormat('pt-BR', { style: 'currency', 
     font-size: 2rem;
     font-weight: 700;
     color: #1f2937;
+}
+
+.resumo {
+    display: grid;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    padding: 1.5rem;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    color: #6b7280;
+}
+
+.resumo p {
+    margin: 0;
+}
+
+.mediana {
+    font-size: 2.25rem;
+    font-weight: 700;
+    color: #6366f1;
 }
 
 .list {
