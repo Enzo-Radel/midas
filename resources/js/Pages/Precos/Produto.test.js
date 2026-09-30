@@ -82,7 +82,7 @@ describe('Precos/Produto', () => {
             expect(texto(wrapper, '.ultima')).toContain('R$ 34,90/kg');
             expect(texto(wrapper, '.ultima')).toContain('Mercado Central');
             expect(texto(wrapper, '.ultima')).toContain('14/09/2026');
-            expect(texto(wrapper, '.contagem')).toBe('3 compras');
+            expect(texto(wrapper, '.contagem')).toBe('3 compras, das quais 1 em promoção');
             expect(texto(wrapper, '.periodo')).toContain('19/07/2026 a 14/09/2026');
             expect(wrapper.find('.resumo').element.compareDocumentPosition(wrapper.find('ul').element)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
             expect(wrapper.findAll('li')).toHaveLength(1);
@@ -97,6 +97,7 @@ describe('Precos/Produto', () => {
                 contagem: 1,
                 ultima: resposta.resumo.ultima,
                 periodo: { inicio: '2026-09-14', fim: '2026-09-14' },
+                em_promocao: 0,
             };
             const wrapper = await resumoDe(resposta);
 
@@ -104,6 +105,46 @@ describe('Precos/Produto', () => {
             expect(texto(wrapper, '.contagem')).toBe('1 compra');
             expect(texto(wrapper, '.periodo')).toContain('14/09/2026');
             expect(texto(wrapper, '.periodo')).not.toContain(' a ');
+        });
+    });
+
+    describe('promoção', () => {
+        const montar = async (ajustar) => {
+            const resposta = contract('produtos.show').response;
+            ajustar(resposta);
+            axios.get.mockResolvedValue({ data: resposta });
+            const wrapper = mount(Produto, { props: { produtoId: 1 } });
+            await flushPromises();
+
+            return wrapper;
+        };
+        const compra = (resposta, campos) => ({ ...resposta.compras[0], ...campos });
+
+        it('o histórico marca a compra em promoção, com ou sem preço original, e não mostra nada nas demais', async () => {
+            const wrapper = await montar((r) => {
+                r.compras = [
+                    compra(r, { id: 3, promocao: true, preco_original_centavos: 2290 }),
+                    compra(r, { id: 2, promocao: true, preco_original_centavos: null }),
+                    compra(r, { id: 1, promocao: false, preco_original_centavos: null }),
+                ];
+            });
+
+            const linhas = wrapper.findAll('li').map((li) => li.text().replace(/\s+/g, ' '));
+            expect(linhas[0]).toContain('Promoção: sim, de R$ 22,90');
+            expect(linhas[1]).toContain('Promoção: sim');
+            expect(linhas[1]).not.toContain(' de R$');
+            expect(linhas[2]).not.toContain('Promoção');
+        });
+
+        it('o resumo conta as compras em promoção', async () => {
+            const comResumo = (contagem, emPromocao) => (r) => {
+                r.resumo.contagem = contagem;
+                r.resumo.em_promocao = emPromocao;
+            };
+
+            expect((await montar(comResumo(4, 1))).find('.contagem').text()).toBe('4 compras, das quais 1 em promoção');
+            expect((await montar(comResumo(1, 1))).find('.contagem').text()).toBe('1 compra, em promoção');
+            expect((await montar(comResumo(4, 0))).find('.contagem').text()).toBe('4 compras');
         });
     });
 

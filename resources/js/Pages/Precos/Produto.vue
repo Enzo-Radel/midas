@@ -26,7 +26,8 @@ const data = (iso) => iso.split('-').reverse().join('/');
 const quantidade = (c) =>
     `${c.quantidade.toLocaleString('pt-BR')} ${c.unidade === 'duzia' ? 'dúzia' : c.unidade}${c.unidades_por_pacote ? ` (${c.unidades_por_pacote} un)` : ''}`;
 const reais = (centavos) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(centavos / 100);
-const contagem = (n) => `${n} ${n === 1 ? 'compra' : 'compras'}`;
+const contagem = (n, emPromocao = 0) =>
+    `${n} ${n === 1 ? 'compra' : 'compras'}${emPromocao === 0 ? '' : n === 1 ? ', em promoção' : `, das quais ${emPromocao} em promoção`}`;
 const diferenca = (percentual) =>
     percentual === null ? '' : percentual === 0 ? 'melhor' : `+${percentual.toLocaleString('pt-BR', { minimumFractionDigits: 1 })}%`;
 const porBase = (centavos) => `${reais(centavos)}/${produto.value.unidade_base}`;
@@ -46,7 +47,7 @@ const porBase = (centavos) => `${reais(centavos)}/${produto.value.unidade_base}`
                     Última compra: {{ porBase(resumo.ultima.preco_base_centavos) }} em {{ resumo.ultima.mercado.nome }},
                     {{ data(resumo.ultima.data) }}
                 </p>
-                <p class="contagem">{{ contagem(resumo.contagem) }}</p>
+                <p class="contagem">{{ contagem(resumo.contagem, resumo.em_promocao) }}</p>
                 <p class="periodo">
                     Período: {{ data(resumo.periodo.inicio) }}<template v-if="resumo.periodo.inicio !== resumo.periodo.fim"> a {{ data(resumo.periodo.fim) }}</template>
                 </p>
@@ -68,6 +69,9 @@ const porBase = (centavos) => `${reais(centavos)}/${produto.value.unidade_base}`
                         <span class="data">{{ data(compra.data) }}</span>
                         <span class="mercado">{{ compra.mercado.nome }}</span>
                         <span class="quantidade">{{ quantidade(compra) }}</span>
+                        <span v-if="compra.promocao" class="promocao">
+                            Promoção: sim{{ compra.preco_original_centavos === null ? '' : `, de ${reais(compra.preco_original_centavos)}` }}
+                        </span>
                     </div>
                     <div class="precos">
                         <span class="preco">{{ reais(compra.preco_centavos) }}</span>
