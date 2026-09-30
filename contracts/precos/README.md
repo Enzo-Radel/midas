@@ -31,7 +31,7 @@ O contrato cresce a cada etapa; o que está aqui é o estado atual.
 
 | Endpoint | Contrato | Regras |
 | --- | --- | --- |
-| `GET /api/precos/produtos` | `produtos.index` | Todos os produtos, em ordem alfabética. |
+| `GET /api/precos/produtos` | `produtos.index` | Todos os produtos (a partir da etapa 4: mais comprados primeiro, empate em ordem alfabética, com filtro `q`). |
 | `GET /api/precos/produtos/{id}` | `produtos.show` | Produto e todas as suas compras, da mais recente para a mais antiga (empate de data: a registrada por último primeiro). |
 | `POST /api/precos/compras` | `compras.store` | Cria a compra. Produto e mercado criados pelo nome se não existirem. Validação: `produto` e `mercado` obrigatórios (texto, até 255); `data` obrigatória (`YYYY-MM-DD`); `quantidade` numérica > 0; `unidade` em `kg, g, L, ml, un`; `preco_centavos` inteiro > 0. |
 
@@ -58,3 +58,10 @@ Cada produto tem uma **unidade base** (`kg`, `L` ou `un`), definida pela unidade
 - Todo produto tem ao menos uma compra, então `resumo` nunca é nulo. Com uma única compra: mediana, mínimo e máximo iguais ao preço dela e `contagem` 1.
 - Exemplos que viram testes: compras a R$ 10, 10, 10 e 30 por kg dão mediana 1000, faixa 1000 a 3000, contagem 4; compras a R$ 10 e 20 por kg dão mediana 1500.
 - Tela (`Precos/Produto`): o resumo aparece no topo, acima do histórico, com a mediana como número de destaque no formato `R$ 37,80/kg`, e abaixo dela, menores: faixa (`R$ 34,90 a R$ 39,10/kg`), última compra (preço por unidade base, mercado e data `dd/mm/aaaa`), contagem ("3 compras", "1 compra") e período coberto (`dd/mm/aaaa a dd/mm/aaaa`, ou uma data só quando início e fim coincidem). Sem veredito de caro ou barato, sem limiar, sem aviso de amostra pequena.
+
+### Etapa 4: consultar na prateleira em segundos
+
+- `GET /api/precos/produtos?q=caf` (`produtos.index`): com `q`, só os produtos cujo nome **contém** o texto (sem diferenciar maiúsculas/minúsculas; `%` e `_` valem como texto comum). Sem `q` (ou vazio), todos. A ordem é sempre **mais comprados primeiro** (`total_compras` decrescente), empate em ordem alfabética. Cada produto ganha `total_compras` (número de compras dele).
+- Consultar nunca cria nem altera registro: só `GET`.
+- Página `/precos` (`Precos/Index`) vira a tela de consulta: campo de busca em foco ao abrir, sugestões logo abaixo a cada mudança do texto (a resposta mais recente é a que vale, respostas atrasadas de texto anterior são ignoradas) e, sem texto, a lista dos mais comprados. Tocar em uma sugestão abre o produto com o resumo. O link "Registrar compra" continua na página. Campo e sugestões com alvos de toque grandes, usáveis com uma mão no celular.
+- Menu no celular: abaixo de 768 px o menu lateral hoje some e não há como abri-lo, então "Preços" só seria alcançável pela URL. Um botão de menu visível nessa largura abre e fecha o menu lateral (o item "Preços" precisa ser alcançável e tocável no celular).
