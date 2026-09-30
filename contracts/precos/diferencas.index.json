@@ -1,0 +1,31 @@
+{
+    "request": null,
+    "status": 200,
+    "response": {
+        "produtos": [
+            {
+                "produto": {
+                    "id": 1,
+                    "nome": "Café",
+                    "marca": "Pilão",
+                    "unidade_base": "kg"
+                },
+                "menor": {
+                    "mercado": {
+                        "id": 1,
+                        "nome": "Atacadão"
+                    },
+                    "mediana_centavos": 3720
+                },
+                "maior": {
+                    "mercado": {
+                        "id": 2,
+                        "nome": "Mercado do bairro"
+                    },
+                    "mediana_centavos": 4450
+                },
+                "diferenca_percentual": 19.6
+            }
+        ]
+    }
+}

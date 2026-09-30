@@ -1,5 +1,20 @@
 {
-    "/precos": { "componente": "Precos/Index", "props": {} },
-    "/precos/compras/nova": { "componente": "Precos/NovaCompra", "props": {} },
-    "/precos/produtos/{id}": { "componente": "Precos/Produto", "props": { "produtoId": 1 } }
+    "/precos": {
+        "componente": "Precos/Index",
+        "props": {}
+    },
+    "/precos/compras/nova": {
+        "componente": "Precos/NovaCompra",
+        "props": {}
+    },
+    "/precos/produtos/{id}": {
+        "componente": "Precos/Produto",
+        "props": {
+            "produtoId": 1
+        }
+    },
+    "/precos/diferencas": {
+        "componente": "Precos/Diferencas",
+        "props": {}
+    }
 }
