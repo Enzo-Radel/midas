@@ -2,18 +2,43 @@
     "request": null,
     "status": 200,
     "response": {
-        "produto": { "id": 1, "nome": "Café", "unidade_base": "kg" },
+        "produto": {
+            "id": 1,
+            "nome": "Café",
+            "unidade_base": "kg"
+        },
         "compras": [
             {
                 "id": 3,
                 "data": "2026-09-14",
-                "mercado": { "id": 1, "nome": "Atacadão" },
+                "mercado": {
+                    "id": 1,
+                    "nome": "Atacadão"
+                },
                 "quantidade": 500,
                 "unidade": "g",
                 "unidades_por_pacote": null,
                 "preco_centavos": 1890,
                 "preco_base_centavos": 3780
             }
-        ]
+        ],
+        "resumo": {
+            "mediana_centavos": 3780,
+            "minimo_centavos": 3490,
+            "maximo_centavos": 3910,
+            "contagem": 3,
+            "ultima": {
+                "preco_base_centavos": 3780,
+                "mercado": {
+                    "id": 1,
+                    "nome": "Atacadão"
+                },
+                "data": "2026-09-14"
+            },
+            "periodo": {
+                "inicio": "2026-07-19",
+                "fim": "2026-09-14"
+            }
+        }
     }
 }

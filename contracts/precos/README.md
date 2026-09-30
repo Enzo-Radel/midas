@@ -46,3 +46,15 @@ Cada produto tem uma **unidade base** (`kg`, `L` ou `un`), definida pela unidade
 - Conversão para a unidade base: `kg`, `L`, `un` valem 1; `g` e `ml` dividem a quantidade por 1000; `duzia` multiplica por 12; `pacote` multiplica por `unidades_por_pacote`.
 - Exemplos que viram testes: café 500 g por R$ 18,90 = 3780 (R$ 37,80/kg); 1 kg por R$ 34,90 = 3490; leite 500 ml por R$ 3,00 = 600 (R$ 6,00/L); ovos, 1 dúzia por R$ 12,00 = 100 (R$ 1,00/un); 1 pacote de 6 un por R$ 9,00 = 150. Registrar `g` para um produto cuja base é `un` é rejeitado.
 - Tela: o formulário oferece `dúzia` e `pacote` (este pede "unidades por pacote"); o histórico do produto mostra o preço por unidade base de cada compra no formato `R$ 37,80/kg`.
+
+### Etapa 3: saber quanto costumo pagar
+
+- `GET /api/precos/produtos/{id}` (`produtos.show`) ganha `resumo`, calculado sobre o **preço por unidade base de todas as compras do produto** (sem excluir nenhuma):
+  - `mediana_centavos`: valor central; com quantidade par de compras, a média dos dois centrais. Arredondado a 2 casas.
+  - `minimo_centavos` e `maximo_centavos`: menor e maior preço por unidade base já pago.
+  - `contagem`: número de compras.
+  - `ultima`: a compra mais recente (mesma ordem do histórico: data e, em empate, a registrada por último), com `preco_base_centavos`, `mercado` (`id`, `nome`) e `data`.
+  - `periodo`: `inicio` e `fim`, datas da compra mais antiga e da mais recente.
+- Todo produto tem ao menos uma compra, então `resumo` nunca é nulo. Com uma única compra: mediana, mínimo e máximo iguais ao preço dela e `contagem` 1.
+- Exemplos que viram testes: compras a R$ 10, 10, 10 e 30 por kg dão mediana 1000, faixa 1000 a 3000, contagem 4; compras a R$ 10 e 20 por kg dão mediana 1500.
+- Tela (`Precos/Produto`): o resumo aparece no topo, acima do histórico, com a mediana como número de destaque no formato `R$ 37,80/kg`, e abaixo dela, menores: faixa (`R$ 34,90 a R$ 39,10/kg`), última compra (preço por unidade base, mercado e data `dd/mm/aaaa`), contagem ("3 compras", "1 compra") e período coberto (`dd/mm/aaaa a dd/mm/aaaa`, ou uma data só quando início e fim coincidem). Sem veredito de caro ou barato, sem limiar, sem aviso de amostra pequena.
