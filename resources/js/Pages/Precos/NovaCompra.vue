@@ -1,11 +1,20 @@
 <script setup>
-import { reactive, ref } from 'vue';
+import { nextTick, ref } from 'vue';
 import axios from 'axios';
 import { router } from '@inertiajs/vue3';
 import AppLayout from '../../Layouts/AppLayout.vue';
 
-const form = reactive({ produto: '', mercado: '', data: '', quantidade: '', unidade: 'kg', unidades_por_pacote: '', preco: '' });
 const unidades = [['kg', 'kg'], ['g', 'g'], ['L', 'L'], ['ml', 'ml'], ['un', 'un'], ['duzia', 'dúzia'], ['pacote', 'pacote']];
+
+let chaves = 0;
+const novaLinha = () => ({ chave: ++chaves, produto: '', quantidade: '', unidade: 'kg', unidades_por_pacote: '', preco: '' });
+
+const formulario = ref(null);
+const mercado = ref('');
+const data = ref(new Date().toLocaleDateString('sv-SE'));
+const itens = ref([novaLinha()]);
+const sugestoes = ref([]);
+const ativa = ref(null);
 const errors = ref({});
 const enviando = ref(false);
 
@@ -16,22 +25,71 @@ const numero = (texto) => {
     return Number(limpo.includes(',') ? limpo.replaceAll('.', '').replace(',', '.') : limpo);
 };
 
+const erro = (campo, linha) => errors.value[linha === undefined ? campo : `itens.${linha}.${campo}`]?.[0];
+
+let consulta = 0;
+
+async function sugerir(linha, q) {
+    const atual = ++consulta;
+    const resposta = await axios.get('/api/precos/produtos', { params: { q } });
+
+    if (atual === consulta) {
+        ativa.value = linha;
+        sugestoes.value = resposta.data.produtos;
+    }
+}
+
+function escolher(item, produto) {
+    const ultima = produto.ultima_compra;
+
+    consulta++;
+    sugestoes.value = [];
+    item.produto = produto.nome;
+    item.quantidade = String(ultima.quantidade).replace('.', ',');
+    item.unidade = ultima.unidade;
+    item.unidades_por_pacote = String(ultima.unidades_por_pacote ?? '');
+    item.preco = (ultima.preco_centavos / 100).toFixed(2).replace('.', ',');
+}
+
+function remover(linha) {
+    sugestoes.value = [];
+    itens.value.splice(linha, 1);
+}
+
+async function proximaLinha(linha) {
+    if (linha === itens.value.length - 1) {
+        itens.value.push(novaLinha());
+    }
+
+    await nextTick();
+    formulario.value.querySelectorAll('input[name=produto]')[linha + 1].focus();
+}
+
+// Enter nos campos não envia o formulário; no botão "Salvar compra" continua valendo.
+const bloquearEnter = (evento) => {
+    if (evento.target.tagName === 'INPUT') {
+        evento.preventDefault();
+    }
+};
+
 async function salvar() {
     enviando.value = true;
     errors.value = {};
 
     try {
-        const { data } = await axios.post('/api/precos/compras', {
-            produto: form.produto,
-            mercado: form.mercado,
-            data: form.data,
-            quantidade: numero(form.quantidade),
-            unidade: form.unidade,
-            unidades_por_pacote: form.unidade === 'pacote' ? numero(form.unidades_por_pacote) : null,
-            preco_centavos: Math.round(numero(form.preco) * 100),
+        await axios.post('/api/precos/compras', {
+            mercado: mercado.value,
+            data: data.value,
+            itens: itens.value.map((item) => ({
+                produto: item.produto,
+                quantidade: numero(item.quantidade),
+                unidade: item.unidade,
+                unidades_por_pacote: item.unidade === 'pacote' ? numero(item.unidades_por_pacote) : null,
+                preco_centavos: Math.round(numero(item.preco) * 100),
+            })),
         });
 
-        router.visit(`/precos/produtos/${data.compra.produto_id}`);
+        router.visit('/precos');
     } catch (e) {
         if (e.response?.status !== 422) {
             throw e;
@@ -48,51 +106,84 @@ async function salvar() {
     <AppLayout>
         <h1 class="page-title">Registrar compra</h1>
 
-        <form class="form" @submit.prevent="salvar">
-            <label class="field">
-                <span class="label">Produto</span>
-                <input v-model="form.produto" name="produto" class="input" type="text" autocomplete="off" />
-                <span v-if="errors.produto" class="error">{{ errors.produto[0] }}</span>
-            </label>
-
+        <form ref="formulario" class="form" @submit.prevent="salvar" @keydown.enter="bloquearEnter">
             <label class="field">
                 <span class="label">Mercado</span>
-                <input v-model="form.mercado" name="mercado" class="input" type="text" autocomplete="off" />
-                <span v-if="errors.mercado" class="error">{{ errors.mercado[0] }}</span>
+                <input v-model="mercado" name="mercado" class="input" type="text" autocomplete="off" />
+                <span v-if="erro('mercado')" class="error">{{ erro('mercado') }}</span>
             </label>
 
             <label class="field">
                 <span class="label">Data</span>
-                <input v-model="form.data" name="data" class="input" type="date" />
-                <span v-if="errors.data" class="error">{{ errors.data[0] }}</span>
+                <input v-model="data" name="data" class="input" type="date" />
+                <span v-if="erro('data')" class="error">{{ erro('data') }}</span>
             </label>
 
-            <label class="field">
-                <span class="label">Quantidade</span>
-                <input v-model="form.quantidade" name="quantidade" class="input" type="text" inputmode="decimal" />
-                <span v-if="errors.quantidade" class="error">{{ errors.quantidade[0] }}</span>
-            </label>
+            <p v-if="erro('itens')" class="error">{{ erro('itens') }}</p>
 
-            <label class="field">
-                <span class="label">Unidade</span>
-                <select v-model="form.unidade" name="unidade" class="input">
-                    <option v-for="[valor, rotulo] in unidades" :key="valor" :value="valor">{{ rotulo }}</option>
-                </select>
-                <span v-if="errors.unidade" class="error">{{ errors.unidade[0] }}</span>
-            </label>
+            <div v-for="(item, i) in itens" :key="item.chave" class="item">
+                <div class="produto">
+                    <label class="field">
+                        <span class="label">Produto</span>
+                        <input
+                            v-model="item.produto"
+                            name="produto"
+                            class="input"
+                            type="text"
+                            autocomplete="off"
+                            @input="sugerir(i, $event.target.value)"
+                            @blur="sugestoes = []"
+                        />
+                        <span v-if="erro('produto', i)" class="error">{{ erro('produto', i) }}</span>
+                    </label>
 
-            <label v-if="form.unidade === 'pacote'" class="field">
-                <span class="label">Unidades por pacote</span>
-                <input v-model="form.unidades_por_pacote" name="unidades_por_pacote" class="input" type="text" inputmode="numeric" />
-                <span v-if="errors.unidades_por_pacote" class="error">{{ errors.unidades_por_pacote[0] }}</span>
-            </label>
+                    <ul v-if="ativa === i && sugestoes.length" class="sugestoes">
+                        <li v-for="produto in sugestoes" :key="produto.id">
+                            <button type="button" class="sugestao" @mousedown.prevent @click="escolher(item, produto)">{{ produto.nome }}</button>
+                        </li>
+                    </ul>
+                </div>
 
-            <label class="field">
-                <span class="label">Preço pago (R$)</span>
-                <input v-model="form.preco" name="preco_centavos" class="input" type="text" inputmode="decimal" placeholder="18,90" />
-                <span v-if="errors.preco_centavos" class="error">{{ errors.preco_centavos[0] }}</span>
-            </label>
+                <div class="campos">
+                    <label class="field">
+                        <span class="label">Quantidade</span>
+                        <input v-model="item.quantidade" name="quantidade" class="input" type="text" inputmode="decimal" />
+                        <span v-if="erro('quantidade', i)" class="error">{{ erro('quantidade', i) }}</span>
+                    </label>
 
+                    <label class="field">
+                        <span class="label">Unidade</span>
+                        <select v-model="item.unidade" name="unidade" class="input">
+                            <option v-for="[valor, rotulo] in unidades" :key="valor" :value="valor">{{ rotulo }}</option>
+                        </select>
+                        <span v-if="erro('unidade', i)" class="error">{{ erro('unidade', i) }}</span>
+                    </label>
+
+                    <label v-if="item.unidade === 'pacote'" class="field">
+                        <span class="label">Unidades por pacote</span>
+                        <input v-model="item.unidades_por_pacote" name="unidades_por_pacote" class="input" type="text" inputmode="numeric" />
+                        <span v-if="erro('unidades_por_pacote', i)" class="error">{{ erro('unidades_por_pacote', i) }}</span>
+                    </label>
+
+                    <label class="field">
+                        <span class="label">Preço pago (R$)</span>
+                        <input
+                            v-model="item.preco"
+                            name="preco_centavos"
+                            class="input"
+                            type="text"
+                            inputmode="decimal"
+                            placeholder="18,90"
+                            @keydown.enter="proximaLinha(i)"
+                        />
+                        <span v-if="erro('preco_centavos', i)" class="error">{{ erro('preco_centavos', i) }}</span>
+                    </label>
+                </div>
+
+                <button type="button" class="button button-danger remover" :disabled="itens.length === 1" @click="remover(i)">Remover item</button>
+            </div>
+
+            <button type="button" class="button button-secondary adicionar" @click="itens.push(novaLinha())">Adicionar item</button>
             <button class="button" type="submit" :disabled="enviando">Salvar compra</button>
         </form>
     </AppLayout>
@@ -109,7 +200,7 @@ async function salvar() {
 .form {
     display: grid;
     gap: 1.25rem;
-    max-width: 480px;
+    max-width: 640px;
     padding: 1.5rem;
     background: white;
     border: 1px solid #e5e7eb;
@@ -128,6 +219,9 @@ async function salvar() {
 }
 
 .input {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
     min-height: 48px;
     padding: 0 0.75rem;
     background: white;
@@ -180,5 +274,85 @@ async function salvar() {
     cursor: not-allowed;
     transform: none;
     box-shadow: none;
+}
+
+.item {
+    display: grid;
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+}
+
+.produto {
+    position: relative;
+}
+
+.campos {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.sugestoes {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    left: 0;
+    z-index: 10;
+    margin: 0.25rem 0 0;
+    padding: 0.25rem;
+    list-style: none;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.sugestao {
+    width: 100%;
+    min-height: 48px;
+    padding: 0 0.75rem;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: #1f2937;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.sugestao:hover {
+    background-color: #f3f4f6;
+}
+
+.sugestao:active {
+    background-color: #e5e7eb;
+}
+
+.button-secondary {
+    background-color: white;
+    border: 1px solid #6366f1;
+    color: #6366f1;
+}
+
+.button-secondary:hover {
+    background-color: #eef2ff;
+}
+
+.button-danger {
+    background-color: white;
+    border: 1px solid #ef4444;
+    color: #ef4444;
+}
+
+.button-danger:hover {
+    background-color: #fef2f2;
+    box-shadow: none;
+}
+
+.button:disabled:hover {
+    transform: none;
 }
 </style>
