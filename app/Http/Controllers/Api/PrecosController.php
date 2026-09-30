@@ -28,7 +28,28 @@ class PrecosController extends Controller
             ->orderByDesc('data')->orderByDesc('id')->get()
             ->makeHidden(['produto_id', 'mercado_id'])->append('preco_base_centavos');
 
-        return response()->json(['produto' => $produto->append('unidade_base'), 'compras' => $compras]);
+        $precos = $compras->pluck('preco_base_centavos');
+        $ultima = $compras->first();
+
+        return response()->json([
+            'produto' => $produto->append('unidade_base'),
+            'compras' => $compras,
+            'resumo' => [
+                'mediana_centavos' => round($precos->median(), 2),
+                'minimo_centavos' => $precos->min(),
+                'maximo_centavos' => $precos->max(),
+                'contagem' => $compras->count(),
+                'ultima' => [
+                    'preco_base_centavos' => $ultima->preco_base_centavos,
+                    'mercado' => $ultima->mercado,
+                    'data' => $ultima->data->toDateString(),
+                ],
+                'periodo' => [
+                    'inicio' => $compras->last()->data->toDateString(),
+                    'fim' => $ultima->data->toDateString(),
+                ],
+            ],
+        ]);
     }
 
     public function registrar(Request $request): JsonResponse

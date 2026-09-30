@@ -190,6 +190,71 @@ class PrecosTest extends TestCase
         $this->registrar(['unidade' => 'kg', 'unidades_por_pacote' => null])->assertCreated();
     }
 
+    public function test_resumo_do_preco_por_unidade_base(): void
+    {
+        foreach ([1000, 1000, 1000, 3000] as $preco) {
+            $this->registrar(['quantidade' => 1, 'unidade' => 'kg', 'preco_centavos' => $preco]);
+        }
+
+        $response = $this->getJson('/api/precos/produtos/1');
+
+        $this->assertContract($response, 'produtos.show');
+        $resumo = $response->json('resumo');
+
+        $this->assertEquals(1000, $resumo['mediana_centavos']);
+        $this->assertEquals(1000, $resumo['minimo_centavos']);
+        $this->assertEquals(3000, $resumo['maximo_centavos']);
+        $this->assertSame(4, $resumo['contagem']);
+    }
+
+    public function test_mediana_com_quantidade_par_e_a_media_dos_dois_centrais(): void
+    {
+        $this->registrar(['quantidade' => 1, 'unidade' => 'kg', 'preco_centavos' => 1000]);
+        $this->registrar(['quantidade' => 1, 'unidade' => 'kg', 'preco_centavos' => 2000]);
+
+        $this->assertEquals(1500, $this->getJson('/api/precos/produtos/1')->json('resumo.mediana_centavos'));
+    }
+
+    public function test_compra_unica_da_resumo_com_contagem_1(): void
+    {
+        $this->registrar();
+
+        $resumo = $this->getJson('/api/precos/produtos/1')->json('resumo');
+
+        $this->assertSame(1, $resumo['contagem']);
+        $this->assertEquals(3780, $resumo['mediana_centavos']);
+        $this->assertEquals(3780, $resumo['minimo_centavos']);
+        $this->assertEquals(3780, $resumo['maximo_centavos']);
+    }
+
+    public function test_resumo_usa_o_preco_por_unidade_base_de_embalagens_misturadas(): void
+    {
+        $this->registrar(['quantidade' => 500, 'unidade' => 'g', 'preco_centavos' => 1890]); // 3780/kg
+        $this->registrar(['quantidade' => 1, 'unidade' => 'kg', 'preco_centavos' => 3490]);
+        $this->registrar(['quantidade' => 250, 'unidade' => 'g', 'preco_centavos' => 1000]); // 4000/kg
+
+        $resumo = $this->getJson('/api/precos/produtos/1')->json('resumo');
+
+        $this->assertEquals(3780, $resumo['mediana_centavos']);
+        $this->assertEquals(3490, $resumo['minimo_centavos']);
+        $this->assertEquals(4000, $resumo['maximo_centavos']);
+    }
+
+    public function test_resumo_traz_a_ultima_compra_e_o_periodo_coberto(): void
+    {
+        $this->registrar(['data' => '2026-09-10', 'mercado' => 'A', 'quantidade' => 1, 'unidade' => 'kg', 'preco_centavos' => 1000]);
+        $this->registrar(['data' => '2026-09-20', 'mercado' => 'B', 'quantidade' => 1, 'unidade' => 'kg', 'preco_centavos' => 2000]);
+        $this->registrar(['data' => '2026-09-20', 'mercado' => 'C', 'quantidade' => 1, 'unidade' => 'kg', 'preco_centavos' => 3000]);
+        $this->registrar(['data' => '2026-08-01', 'mercado' => 'D', 'quantidade' => 1, 'unidade' => 'kg', 'preco_centavos' => 500]);
+
+        $resumo = $this->getJson('/api/precos/produtos/1')->json('resumo');
+
+        $this->assertSame('C', $resumo['ultima']['mercado']['nome']);
+        $this->assertSame('2026-09-20', $resumo['ultima']['data']);
+        $this->assertEquals(3000, $resumo['ultima']['preco_base_centavos']);
+        $this->assertSame(['inicio' => '2026-08-01', 'fim' => '2026-09-20'], $resumo['periodo']);
+    }
+
     public function test_paginas_renderizam_o_componente_com_as_props_do_contrato(): void
     {
         foreach ($this->contract('paginas') as $rota => $pagina) {
