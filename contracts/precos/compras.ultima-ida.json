@@ -1,0 +1,16 @@
+{
+    "request": null,
+    "status": 200,
+    "response": {
+        "data": "2026-09-14",
+        "itens": [
+            {
+                "produto": "Café",
+                "quantidade": 500,
+                "unidade": "g",
+                "unidades_por_pacote": null,
+                "preco_centavos": 1890
+            }
+        ]
+    }
+}
