@@ -22,7 +22,7 @@ class PrecosController extends Controller
             ->when(filled($q), fn ($query) => $query
                 ->whereRaw("lower(nome) like ? escape '!'", ['%'.strtr(mb_strtolower($q), ['!' => '!!', '%' => '!%', '_' => '!_']).'%']))
             ->orderByDesc('total_compras')->orderByRaw('lower(nome)')->get();
-        $produtos->each(fn ($produto) => $produto->ultimaCompra->makeHidden(['id', 'produto_id', 'mercado_id', 'data']));
+        $produtos->each(fn ($produto) => $produto->ultimaCompra->makeHidden(['id', 'produto_id', 'mercado_id', 'data', 'promocao', 'preco_original_centavos']));
 
         return response()->json(['produtos' => $produtos]);
     }
@@ -68,6 +68,7 @@ class PrecosController extends Controller
                     'inicio' => $compras->last()->data->toDateString(),
                     'fim' => $ultima->data->toDateString(),
                 ],
+                'em_promocao' => $compras->where('promocao')->count(),
             ],
         ]);
     }
@@ -83,6 +84,8 @@ class PrecosController extends Controller
             'itens.*.unidade' => ['required', Rule::in(array_keys(Compra::UNIDADES))],
             'itens.*.unidades_por_pacote' => ['required_if:itens.*.unidade,pacote', 'nullable', 'integer', 'min:1'],
             'itens.*.preco_centavos' => ['required', 'integer', 'gt:0'],
+            'itens.*.promocao' => ['required', 'boolean'],
+            'itens.*.preco_original_centavos' => ['nullable', 'integer', 'gt:0'],
         ]);
 
         // A unidade base de um produto vem da primeira compra dele, inclusive dentro do próprio lote.
@@ -109,6 +112,7 @@ class PrecosController extends Controller
 
             return Compra::create([
                 ...Arr::except($item, 'produto'),
+                'preco_original_centavos' => $item['promocao'] ? $item['preco_original_centavos'] ?? null : null,
                 'data' => $dados['data'],
                 'produto_id' => $produto->id,
                 'mercado_id' => $mercado->id,

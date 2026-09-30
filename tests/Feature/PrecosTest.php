@@ -178,6 +178,8 @@ class PrecosTest extends TestCase
             'unidade' => [null, 'xícara'],
             'unidades_por_pacote' => [null, 0, 'abc'],
             'preco_centavos' => [null, 'abc', 0, -5, 18.9],
+            'promocao' => [null, 'abc'],
+            'preco_original_centavos' => ['abc', 0, -5, 18.9],
         ];
 
         foreach ($topo as $campo => $valores) {
@@ -482,6 +484,70 @@ class PrecosTest extends TestCase
         }
 
         $this->assertSame($antes, $this->contagens());
+    }
+
+    public function test_marca_promocao_com_ou_sem_preco_original(): void
+    {
+        $sem = $this->registrar(['promocao' => true, 'preco_original_centavos' => null])->assertCreated();
+        $this->assertSame([true, null], [$sem->json('compras.0.promocao'), $sem->json('compras.0.preco_original_centavos')]);
+
+        $com = $this->registrar(['promocao' => true, 'preco_original_centavos' => 3990])->assertCreated();
+        $this->assertSame([true, 3990], [$com->json('compras.0.promocao'), $com->json('compras.0.preco_original_centavos')]);
+
+        $show = $this->getJson('/api/precos/produtos/1');
+        $this->assertContract($show, 'produtos.show');
+        $this->assertSame([true, 3990], [$show->json('compras.0.promocao'), $show->json('compras.0.preco_original_centavos')]);
+        $this->assertSame(2, $show->json('resumo.em_promocao'));
+    }
+
+    public function test_sem_promocao_o_preco_original_e_guardado_como_nulo(): void
+    {
+        $response = $this->registrar(['promocao' => false, 'preco_original_centavos' => 3990])->assertCreated();
+
+        $this->assertSame([false, null], [$response->json('compras.0.promocao'), $response->json('compras.0.preco_original_centavos')]);
+        $this->assertDatabaseHas('compras', ['promocao' => false, 'preco_original_centavos' => null]);
+    }
+
+    public function test_preco_original_invalido_da_mensagem_em_portugues(): void
+    {
+        $this->assertSame(
+            'O campo preço original deve ser maior que zero.',
+            $this->erro($this->registrar(['preco_original_centavos' => 0]), 'itens.0.preco_original_centavos'),
+        );
+        $this->assertSame(
+            'O campo preço original deve ser um número inteiro.',
+            $this->erro($this->registrar(['preco_original_centavos' => 18.9]), 'itens.0.preco_original_centavos'),
+        );
+    }
+
+    public function test_promocao_nao_altera_nenhum_calculo(): void
+    {
+        // Mesmas compras para dois produtos: um sem marcação, outro com promoção em algumas.
+        $compras = [
+            ['Atacadão', '2026-09-01', 1, 'kg', 3490, false],
+            ['Bairro', '2026-09-10', 500, 'g', 1955, true],
+            ['Atacadão', '2026-09-20', 1, 'kg', 1000, true],
+            ['Bairro', '2026-09-20', 2, 'kg', 7000, false],
+        ];
+        foreach (['Sem' => false, 'Com' => true] as $produto => $usaPromocao) {
+            foreach ($compras as [$mercado, $data, $quantidade, $unidade, $preco, $promocao]) {
+                $this->registrar([
+                    'produto' => $produto, 'mercado' => $mercado, 'data' => $data, 'quantidade' => $quantidade,
+                    'unidade' => $unidade, 'preco_centavos' => $preco, 'promocao' => $usaPromocao && $promocao,
+                ])->assertCreated();
+            }
+        }
+
+        $sem = $this->getJson('/api/precos/produtos/1')->json();
+        $com = $this->getJson('/api/precos/produtos/2')->json();
+
+        $this->assertSame([0, 2], [$sem['resumo']['em_promocao'], $com['resumo']['em_promocao']]);
+        $this->assertEquals(Arr::except($sem['resumo'], 'em_promocao'), Arr::except($com['resumo'], 'em_promocao'));
+        $this->assertEquals($sem['mercados'], $com['mercados']);
+        $this->assertEquals(
+            array_map(fn ($c) => Arr::only($c, ['data', 'mercado', 'preco_base_centavos']), $sem['compras']),
+            array_map(fn ($c) => Arr::only($c, ['data', 'mercado', 'preco_base_centavos']), $com['compras']),
+        );
     }
 
     public function test_paginas_renderizam_o_componente_com_as_props_do_contrato(): void

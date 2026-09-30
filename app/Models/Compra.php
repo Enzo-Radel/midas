@@ -21,13 +21,14 @@ class Compra extends Model
 
     public $timestamps = false;
 
-    protected $fillable = ['produto_id', 'mercado_id', 'data', 'quantidade', 'unidade', 'unidades_por_pacote', 'preco_centavos'];
+    protected $fillable = ['produto_id', 'mercado_id', 'data', 'quantidade', 'unidade', 'unidades_por_pacote', 'preco_centavos', 'promocao', 'preco_original_centavos'];
 
     protected function casts(): array
     {
         return [
             'data' => 'date:Y-m-d',
             'quantidade' => 'float',
+            'promocao' => 'boolean',
         ];
     }
 

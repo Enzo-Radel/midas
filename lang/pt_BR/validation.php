@@ -2,6 +2,7 @@
 
 return [
     'required' => 'O campo :attribute é obrigatório.',
+    'boolean' => 'O campo :attribute deve ser verdadeiro ou falso.',
     'array' => 'O campo :attribute deve ser uma lista.',
     'string' => 'O campo :attribute deve ser um texto.',
     'max' => ['string' => 'O campo :attribute não pode ter mais de :max caracteres.'],
@@ -22,5 +23,7 @@ return [
         'itens.*.unidade' => 'unidade',
         'itens.*.unidades_por_pacote' => 'unidades por pacote',
         'itens.*.preco_centavos' => 'preço pago',
+        'itens.*.promocao' => 'promoção',
+        'itens.*.preco_original_centavos' => 'preço original',
     ],
 ];
