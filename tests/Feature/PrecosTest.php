@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\Compra;
 use App\Models\Mercado;
+use App\Models\Produto;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia;
@@ -66,16 +68,57 @@ class PrecosTest extends TestCase
         $this->assertSame(1890, $response->json('compras.0.preco_centavos'));
     }
 
-    public function test_lista_produtos_em_ordem_alfabetica(): void
+    public function test_lista_produtos_mais_comprados_primeiro_com_empate_alfabetico(): void
     {
-        $this->registrar(['produto' => 'feijão']);
-        $this->registrar(['produto' => 'Arroz']);
-        $this->registrar(['produto' => 'Café']);
+        foreach (['feijão', 'Arroz', 'Café', 'Café', 'Café', 'feijão', 'Arroz'] as $produto) {
+            $this->registrar(['produto' => $produto]);
+        }
 
         $response = $this->getJson('/api/precos/produtos');
 
         $this->assertContract($response, 'produtos.index');
-        $this->assertSame(['Arroz', 'Café', 'feijão'], array_column($response->json('produtos'), 'nome'));
+        $this->assertSame(['Café', 'Arroz', 'feijão'], array_column($response->json('produtos'), 'nome'));
+        $this->assertSame([3, 2, 2], array_column($response->json('produtos'), 'total_compras'));
+        $this->assertSame(
+            array_column($response->json('produtos'), 'nome'),
+            array_column($this->getJson('/api/precos/produtos?q=')->json('produtos'), 'nome'),
+        );
+    }
+
+    public function test_busca_por_nome_contem_o_texto_sem_diferenciar_caixa(): void
+    {
+        foreach (['Café', 'Cafezinho', 'Café', 'Arroz'] as $produto) {
+            $this->registrar(['produto' => $produto]);
+        }
+
+        foreach (['caf', 'CAF', 'fé'] as $q) {
+            $response = $this->getJson('/api/precos/produtos?q='.urlencode($q));
+
+            $this->assertContract($response, 'produtos.index');
+            $this->assertSame($q === 'fé' ? ['Café'] : ['Café', 'Cafezinho'], array_column($response->json('produtos'), 'nome'));
+        }
+    }
+
+    public function test_porcentagem_e_sublinhado_na_busca_valem_como_texto(): void
+    {
+        foreach (['50% Cacau', 'a_b', 'Arroz'] as $produto) {
+            $this->registrar(['produto' => $produto]);
+        }
+
+        $this->assertSame(['50% Cacau'], array_column($this->getJson('/api/precos/produtos?q=%25')->json('produtos'), 'nome'));
+        $this->assertSame(['a_b'], array_column($this->getJson('/api/precos/produtos?q=_')->json('produtos'), 'nome'));
+    }
+
+    public function test_consultar_nao_cria_nem_altera_registros(): void
+    {
+        $this->registrar();
+        $antes = [Produto::count(), Mercado::count(), Compra::count()];
+
+        $this->getJson('/api/precos/produtos?q=caf');
+        $this->getJson('/api/precos/produtos?q=inexistente');
+        $this->getJson('/api/precos/produtos');
+
+        $this->assertSame($antes, [Produto::count(), Mercado::count(), Compra::count()]);
     }
 
     public function test_produto_inexistente_retorna_404(): void

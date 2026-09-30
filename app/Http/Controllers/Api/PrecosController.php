@@ -15,11 +15,15 @@ use Illuminate\Validation\ValidationException;
 
 class PrecosController extends Controller
 {
-    public function produtos(): JsonResponse
+    public function produtos(Request $request): JsonResponse
     {
-        return response()->json([
-            'produtos' => Produto::orderByRaw('lower(nome)')->get(),
-        ]);
+        $q = $request->query('q');
+        $produtos = Produto::withCount('compras as total_compras')
+            ->when(filled($q), fn ($query) => $query
+                ->whereRaw("lower(nome) like ? escape '!'", ['%'.strtr(mb_strtolower($q), ['!' => '!!', '%' => '!%', '_' => '!_']).'%']))
+            ->orderByDesc('total_compras')->orderByRaw('lower(nome)')->get();
+
+        return response()->json(['produtos' => $produtos]);
     }
 
     public function produto(Produto $produto): JsonResponse
