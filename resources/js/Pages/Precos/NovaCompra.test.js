@@ -260,4 +260,137 @@ describe('Precos/NovaCompra', () => {
         expect(corpo.itens).toHaveLength(15);
         expect(corpo.itens[14]).toEqual({ produto: 'Produto 14', quantidade: 1, unidade: 'un', unidades_por_pacote: null, preco_centavos: 1500 });
     });
+
+    describe('repetir última compra', () => {
+        const ultimaIda = contract('compras.ultima-ida');
+        const itemIda = (produto, quantidade, unidade, unidades_por_pacote, preco_centavos) => ({ produto, quantidade, unidade, unidades_por_pacote, preco_centavos });
+        const ida = (...itens) => ({ data: { data: '2026-08-01', itens } });
+        const responder = (resposta) =>
+            axios.get.mockImplementation(async (url) => (url.includes('ultima-ida') ? resposta : { data: contract('produtos.index').response }));
+        const repetir = async (wrapper) => {
+            await wrapper.find('button.repetir').trigger('click');
+            await flushPromises();
+        };
+
+        it('consulta a última ida com o mercado digitado e acrescenta as linhas depois das existentes, sem a linha vazia', async () => {
+            responder({ data: ultimaIda.response });
+
+            const wrapper = mount(NovaCompra);
+            expect(wrapper.find('button.repetir').text()).toBe('Repetir última compra');
+            await campo(wrapper, 'mercado').setValue('Atacadão');
+            await repetir(wrapper);
+
+            expect(axios.get).toHaveBeenCalledWith('/api/precos/compras/ultima-ida', { params: { mercado: 'Atacadão' } });
+            expect(linhas(wrapper)).toBe(1);
+            expect(campo(wrapper, 'produto').element.value).toBe('Café');
+            expect(campo(wrapper, 'quantidade').element.value).toBe('500');
+            expect(campo(wrapper, 'unidade').element.value).toBe('g');
+            expect(campo(wrapper, 'preco_centavos').element.value).toBe('18,90');
+            expect(campo(wrapper, 'levei').element.checked).toBe(true);
+        });
+
+        it('mantém as linhas já digitadas, traz pacote preenchido e deixa tudo editável; a data continua a da tela', async () => {
+            responder(ida(itemIda('Ovos', 2, 'pacote', 6, 900), itemIda('Leite', 1.5, 'L', null, 650)));
+
+            const wrapper = mount(NovaCompra);
+            await campo(wrapper, 'mercado').setValue('Atacadão');
+            await campo(wrapper, 'data').setValue('2026-09-14');
+            await preencherLinha(wrapper, 0, cafe);
+            await repetir(wrapper);
+
+            expect(wrapper.findAll('input[name=produto]').map((i) => i.element.value)).toEqual(['Café', 'Ovos', 'Leite']);
+            expect(campo(wrapper, 'unidade', 1).element.value).toBe('pacote');
+            expect(campo(wrapper, 'unidades_por_pacote', 1).element.value).toBe('6');
+            expect(campo(wrapper, 'quantidade', 2).element.value).toBe('1,5');
+
+            await campo(wrapper, 'preco_centavos', 1).setValue('8,50');
+            await salvar(wrapper);
+
+            expect(axios.post.mock.calls[0][1].data).toBe('2026-09-14');
+            expect(axios.post.mock.calls[0][1].itens).toMatchObject([
+                { produto: 'Café' },
+                { produto: 'Ovos', unidade: 'pacote', unidades_por_pacote: 6, preco_centavos: 850 },
+                { produto: 'Leite', quantidade: 1.5, preco_centavos: 650 },
+            ]);
+        });
+
+        it('envia só as linhas marcadas em "Levei"', async () => {
+            responder(ida(itemIda('Ovos', 1, 'duzia', null, 1200), itemIda('Leite', 1, 'L', null, 650), itemIda('Pão', 1, 'un', null, 800)));
+
+            const wrapper = mount(NovaCompra);
+            await preencherCabecalho(wrapper);
+            await repetir(wrapper);
+            await campo(wrapper, 'levei', 1).setValue(false);
+            await salvar(wrapper);
+
+            const corpo = axios.post.mock.calls[0][1];
+            expectShape(corpo, store.request);
+            expect(corpo.itens.map((i) => i.produto)).toEqual(['Ovos', 'Pão']);
+        });
+
+        it('sem nenhuma marcada não envia e mostra "Marque ao menos um item."', async () => {
+            const wrapper = mount(NovaCompra);
+            await preencherCabecalho(wrapper);
+            await preencherLinha(wrapper, 0, cafe);
+            await campo(wrapper, 'levei').setValue(false);
+            await salvar(wrapper);
+
+            expect(axios.post).not.toHaveBeenCalled();
+            expect(wrapper.text()).toContain('Marque ao menos um item.');
+        });
+
+        it('mostra o erro 422 na linha certa mesmo com linhas desmarcadas antes dela', async () => {
+            axios.post.mockRejectedValue({ response: { status: 422, data: { message: 'inválido', errors: { 'itens.0.preco_centavos': ['Preço inválido.'] } } } });
+
+            const wrapper = mount(NovaCompra);
+            await preencherCabecalho(wrapper);
+            await preencherLinha(wrapper, 0, cafe);
+            await wrapper.find('button.adicionar').trigger('click');
+            await preencherLinha(wrapper, 1, { ...cafe, produto: 'Leite' });
+            await campo(wrapper, 'levei', 0).setValue(false);
+            await salvar(wrapper);
+
+            expect(campo(wrapper, 'preco_centavos', 1).element.closest('label').textContent).toContain('Preço inválido.');
+            expect(campo(wrapper, 'preco_centavos', 0).element.closest('label').textContent).not.toContain('Preço inválido.');
+        });
+
+        it('avisa quando não há compra anterior e não muda as linhas', async () => {
+            responder({ data: { data: null, itens: [] } });
+
+            const wrapper = mount(NovaCompra);
+            await campo(wrapper, 'mercado').setValue('Mercado Novo');
+            await preencherLinha(wrapper, 0, cafe);
+            await repetir(wrapper);
+
+            expect(wrapper.text()).toContain('Nenhuma compra anterior neste mercado.');
+            expect(linhas(wrapper)).toBe(1);
+            expect(campo(wrapper, 'produto').element.value).toBe('Café');
+        });
+
+        it('o botão fica desabilitado com o mercado vazio', async () => {
+            const wrapper = mount(NovaCompra);
+
+            expect(wrapper.find('button.repetir').attributes('disabled')).toBeDefined();
+            await campo(wrapper, 'mercado').setValue('Atacadão');
+            expect(wrapper.find('button.repetir').attributes('disabled')).toBeUndefined();
+        });
+
+        it('ignora a resposta atrasada de uma consulta antiga', async () => {
+            const pendentes = {};
+            axios.get.mockImplementation((url, { params }) => new Promise((resolve) => (pendentes[params.mercado] = resolve)));
+
+            const wrapper = mount(NovaCompra);
+            await campo(wrapper, 'mercado').setValue('Antigo');
+            await wrapper.find('button.repetir').trigger('click');
+            await campo(wrapper, 'mercado').setValue('Atual');
+            await wrapper.find('button.repetir').trigger('click');
+
+            pendentes.Atual(ida(itemIda('Café', 500, 'g', null, 1890)));
+            await flushPromises();
+            pendentes.Antigo(ida(itemIda('Velho', 1, 'un', null, 100)));
+            await flushPromises();
+
+            expect(wrapper.findAll('input[name=produto]').map((i) => i.element.value)).toEqual(['Café']);
+        });
+    });
 });

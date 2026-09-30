@@ -7,7 +7,7 @@ import AppLayout from '../../Layouts/AppLayout.vue';
 const unidades = [['kg', 'kg'], ['g', 'g'], ['L', 'L'], ['ml', 'ml'], ['un', 'un'], ['duzia', 'dúzia'], ['pacote', 'pacote']];
 
 let chaves = 0;
-const novaLinha = () => ({ chave: ++chaves, produto: '', quantidade: '', unidade: 'kg', unidades_por_pacote: '', preco: '' });
+const novaLinha = () => ({ chave: ++chaves, produto: '', quantidade: '', unidade: 'kg', unidades_por_pacote: '', preco: '', levei: true });
 
 const formulario = ref(null);
 const mercado = ref('');
@@ -15,6 +15,7 @@ const data = ref(new Date().toLocaleDateString('sv-SE'));
 const itens = ref([novaLinha()]);
 const sugestoes = ref([]);
 const ativa = ref(null);
+const aviso = ref('');
 const errors = ref({});
 const enviando = ref(false);
 
@@ -39,16 +40,44 @@ async function sugerir(linha, q) {
     }
 }
 
-function escolher(item, produto) {
-    const ultima = produto.ultima_compra;
-
-    consulta++;
-    sugestoes.value = [];
-    item.produto = produto.nome;
+function preencher(item, ultima) {
     item.quantidade = String(ultima.quantidade).replace('.', ',');
     item.unidade = ultima.unidade;
     item.unidades_por_pacote = String(ultima.unidades_por_pacote ?? '');
     item.preco = (ultima.preco_centavos / 100).toFixed(2).replace('.', ',');
+}
+
+function escolher(item, produto) {
+    consulta++;
+    sugestoes.value = [];
+    item.produto = produto.nome;
+    preencher(item, produto.ultima_compra);
+}
+
+const vazia = (item) => !item.produto && !item.quantidade && !item.unidades_por_pacote && !item.preco;
+let consultaIda = 0;
+
+async function repetir() {
+    const atual = ++consultaIda;
+    const { data: ida } = await axios.get('/api/precos/compras/ultima-ida', { params: { mercado: mercado.value } });
+
+    if (atual !== consultaIda) {
+        return;
+    }
+
+    aviso.value = ida.itens.length ? '' : 'Nenhuma compra anterior neste mercado.';
+
+    if (ida.itens.length) {
+        itens.value = [
+            ...itens.value.filter((item) => !vazia(item)),
+            ...ida.itens.map((compra) => {
+                const item = { ...novaLinha(), produto: compra.produto };
+                preencher(item, compra);
+
+                return item;
+            }),
+        ];
+    }
 }
 
 function remover(linha) {
@@ -73,14 +102,23 @@ const bloquearEnter = (evento) => {
 };
 
 async function salvar() {
-    enviando.value = true;
+    const posicoes = itens.value.flatMap((item, i) => (item.levei ? [i] : []));
+
     errors.value = {};
+
+    if (!posicoes.length) {
+        errors.value = { itens: ['Marque ao menos um item.'] };
+
+        return;
+    }
+
+    enviando.value = true;
 
     try {
         await axios.post('/api/precos/compras', {
             mercado: mercado.value,
             data: data.value,
-            itens: itens.value.map((item) => ({
+            itens: itens.value.filter((item) => item.levei).map((item) => ({
                 produto: item.produto,
                 quantidade: numero(item.quantidade),
                 unidade: item.unidade,
@@ -95,7 +133,10 @@ async function salvar() {
             throw e;
         }
 
-        errors.value = e.response.data.errors;
+        // O backend numera os itens pela lista enviada; a tela pela posição da linha.
+        errors.value = Object.fromEntries(
+            Object.entries(e.response.data.errors).map(([chave, mensagens]) => [chave.replace(/^itens\.(\d+)\./, (_, n) => `itens.${posicoes[n]}.`), mensagens]),
+        );
     } finally {
         enviando.value = false;
     }
@@ -112,6 +153,9 @@ async function salvar() {
                 <input v-model="mercado" name="mercado" class="input" type="text" autocomplete="off" />
                 <span v-if="erro('mercado')" class="error">{{ erro('mercado') }}</span>
             </label>
+
+            <button type="button" class="button button-secondary repetir" :disabled="!mercado.trim()" @click="repetir">Repetir última compra</button>
+            <p v-if="aviso" class="aviso">{{ aviso }}</p>
 
             <label class="field">
                 <span class="label">Data</span>
@@ -143,6 +187,11 @@ async function salvar() {
                         </li>
                     </ul>
                 </div>
+
+                <label class="levei">
+                    <input v-model="item.levei" name="levei" type="checkbox" />
+                    Levei
+                </label>
 
                 <div class="campos">
                     <label class="field">
@@ -286,6 +335,28 @@ async function salvar() {
 
 .produto {
     position: relative;
+}
+
+.aviso {
+    margin: 0;
+    color: #6b7280;
+}
+
+.levei {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 48px;
+    font-weight: 500;
+    color: #1f2937;
+    cursor: pointer;
+}
+
+.levei input {
+    width: 24px;
+    height: 24px;
+    accent-color: #6366f1;
+    cursor: pointer;
 }
 
 .campos {
