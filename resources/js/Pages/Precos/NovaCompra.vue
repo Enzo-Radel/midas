@@ -3,11 +3,12 @@ import { nextTick, ref } from 'vue';
 import axios from 'axios';
 import { router } from '@inertiajs/vue3';
 import AppLayout from '../../Layouts/AppLayout.vue';
+import { nomeExibido } from '../../lib/nomeExibido';
 
 const unidades = [['kg', 'kg'], ['g', 'g'], ['L', 'L'], ['ml', 'ml'], ['un', 'un'], ['duzia', 'dúzia'], ['pacote', 'pacote']];
 
 let chaves = 0;
-const novaLinha = () => ({ chave: ++chaves, produto: '', quantidade: '', unidade: 'kg', unidades_por_pacote: '', preco: '', levei: true, promocao: false, preco_original: '' });
+const novaLinha = () => ({ chave: ++chaves, produto: '', marca: '', quantidade: '', unidade: 'kg', unidades_por_pacote: '', preco: '', levei: true, promocao: false, preco_original: '' });
 
 const formulario = ref(null);
 const mercado = ref('');
@@ -56,6 +57,7 @@ function preencher(item, ultima) {
 function escolher(item, produto) {
     fecharSugestoes();
     item.produto = produto.nome;
+    item.marca = produto.marca ?? '';
     preencher(item, produto.ultima_compra);
 }
 
@@ -76,7 +78,7 @@ async function repetir() {
         itens.value = [
             ...itens.value.filter((item) => !vazia(item)),
             ...ida.itens.map((compra) => {
-                const item = { ...novaLinha(), produto: compra.produto };
+                const item = { ...novaLinha(), produto: compra.produto, marca: compra.marca ?? '' };
                 preencher(item, compra);
 
                 return item;
@@ -125,6 +127,7 @@ async function salvar() {
             data: data.value,
             itens: itens.value.filter((item) => item.levei).map((item) => ({
                 produto: item.produto,
+                marca: item.marca.trim() || null,
                 quantidade: numero(item.quantidade),
                 unidade: item.unidade,
                 unidades_por_pacote: item.unidade === 'pacote' ? numero(item.unidades_por_pacote) : null,
@@ -190,10 +193,16 @@ async function salvar() {
 
                     <ul v-if="ativa === i && sugestoes.length" class="sugestoes">
                         <li v-for="produto in sugestoes" :key="produto.id">
-                            <button type="button" class="sugestao" @mousedown.prevent @click="escolher(item, produto)">{{ produto.nome }}</button>
+                            <button type="button" class="sugestao" @mousedown.prevent @click="escolher(item, produto)">{{ nomeExibido(produto) }}</button>
                         </li>
                     </ul>
                 </div>
+
+                <label class="field">
+                    <span class="label">Marca (opcional)</span>
+                    <input v-model="item.marca" name="marca" class="input" type="text" autocomplete="off" />
+                    <span v-if="erro('marca', i)" class="error">{{ erro('marca', i) }}</span>
+                </label>
 
                 <div class="marcas">
                     <label class="marca">

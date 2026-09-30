@@ -23,7 +23,7 @@ describe('Precos/Produto', () => {
         await flushPromises();
 
         expect(axios.get).toHaveBeenCalledWith('/api/precos/produtos/1');
-        expect(wrapper.find('h1').text()).toBe('Café');
+        expect(wrapper.find('h1').text()).toBe('Café Pilão');
 
         const linhas = wrapper.findAll('li').map((li) => li.text().replace(/\s+/g, ' '));
         expect(linhas).toHaveLength(3);
@@ -106,6 +106,17 @@ describe('Precos/Produto', () => {
             expect(texto(wrapper, '.periodo')).toContain('14/09/2026');
             expect(texto(wrapper, '.periodo')).not.toContain(' a ');
         });
+    });
+
+    it('o título é só o nome quando o produto não tem marca', async () => {
+        const resposta = contract('produtos.show').response;
+        resposta.produto.marca = null;
+        axios.get.mockResolvedValue({ data: resposta });
+
+        const wrapper = mount(Produto, { props: { produtoId: 1 } });
+        await flushPromises();
+
+        expect(wrapper.find('h1').text()).toBe('Café');
     });
 
     describe('promoção', () => {

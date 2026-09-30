@@ -2,6 +2,7 @@
 import { onMounted, ref, watch } from 'vue';
 import axios from 'axios';
 import AppLayout from '../../Layouts/AppLayout.vue';
+import { nomeExibido } from '../../lib/nomeExibido';
 
 const busca = ref('');
 const campo = ref(null);
@@ -43,7 +44,7 @@ watch(
 
         <ul class="list">
             <li v-for="produto in produtos" :key="produto.id">
-                <a :href="`/precos/produtos/${produto.id}`" class="card">{{ produto.nome }}</a>
+                <a :href="`/precos/produtos/${produto.id}`" class="card">{{ nomeExibido(produto) }}</a>
             </li>
         </ul>
     </AppLayout>

@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import axios from 'axios';
 import AppLayout from '../../Layouts/AppLayout.vue';
+import { nomeExibido } from '../../lib/nomeExibido';
 
 const props = defineProps({
     produtoId: {
@@ -36,7 +37,7 @@ const porBase = (centavos) => `${reais(centavos)}/${produto.value.unidade_base}`
 <template>
     <AppLayout>
         <template v-if="produto">
-            <h1 class="page-title">{{ produto.nome }}</h1>
+            <h1 class="page-title">{{ nomeExibido(produto) }}</h1>
 
             <section class="resumo">
                 <p class="mediana">{{ porBase(resumo.mediana_centavos) }}</p>

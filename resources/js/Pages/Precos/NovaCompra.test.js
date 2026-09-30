@@ -13,8 +13,11 @@ const campo = (wrapper, nome, linha = 0) =>
     ['mercado', 'data'].includes(nome) ? wrapper.find(`[name=${nome}]`) : wrapper.findAll('.item')[linha].find(`[name=${nome}]`);
 const linhas = (wrapper) => wrapper.findAll('.item').length;
 
-async function preencherLinha(wrapper, i, { produto, quantidade, unidade, unidades_por_pacote, preco }) {
+async function preencherLinha(wrapper, i, { produto, marca, quantidade, unidade, unidades_por_pacote, preco }) {
     await campo(wrapper, 'produto', i).setValue(produto);
+    if (marca) {
+        await campo(wrapper, 'marca', i).setValue(marca);
+    }
     await campo(wrapper, 'quantidade', i).setValue(quantidade);
     await campo(wrapper, 'unidade', i).setValue(unidade);
     if (unidades_por_pacote) {
@@ -46,7 +49,7 @@ describe('Precos/NovaCompra', () => {
     it('envia uma requisição no formato de compras.store.request, com vários itens (pacote e não-pacote), e vai para /precos', async () => {
         const wrapper = mount(NovaCompra);
         await preencherCabecalho(wrapper);
-        await preencherLinha(wrapper, 0, cafe);
+        await preencherLinha(wrapper, 0, { ...cafe, marca: 'Pilão' });
         await wrapper.find('button.adicionar').trigger('click');
         await preencherLinha(wrapper, 1, { produto: 'Ovos', quantidade: '2', unidade: 'pacote', unidades_por_pacote: '6', preco: '9,00' });
         await salvar(wrapper);
@@ -59,11 +62,24 @@ describe('Precos/NovaCompra', () => {
             mercado: 'Atacadão',
             data: '2026-09-14',
             itens: [
-                { produto: 'Café', quantidade: 500, unidade: 'g', unidades_por_pacote: null, preco_centavos: 1890, promocao: false, preco_original_centavos: null },
-                { produto: 'Ovos', quantidade: 2, unidade: 'pacote', unidades_por_pacote: 6, preco_centavos: 900, promocao: false, preco_original_centavos: null },
+                { produto: 'Café', marca: 'Pilão', quantidade: 500, unidade: 'g', unidades_por_pacote: null, preco_centavos: 1890, promocao: false, preco_original_centavos: null },
+                { produto: 'Ovos', marca: null, quantidade: 2, unidade: 'pacote', unidades_por_pacote: 6, preco_centavos: 900, promocao: false, preco_original_centavos: null },
             ],
         });
         expect(router.visit).toHaveBeenCalledWith('/precos');
+    });
+
+    it('o campo Marca é opcional: vazio ou só espaços vai como null, e marca digitada vai como digitada', async () => {
+        const wrapper = mount(NovaCompra);
+        await preencherCabecalho(wrapper);
+        await preencherLinha(wrapper, 0, cafe);
+        await campo(wrapper, 'marca', 0).setValue('   ');
+        await wrapper.find('button.adicionar').trigger('click');
+        await preencherLinha(wrapper, 1, { ...cafe, marca: 'Melitta' });
+        await salvar(wrapper);
+
+        expectShape(axios.post.mock.calls[0][1], store.request);
+        expect(axios.post.mock.calls[0][1].itens.map((i) => [i.produto, i.marca])).toEqual([['Café', null], ['Café', 'Melitta']]);
     });
 
     it('converte preço e quantidade digitados: vírgula ou ponto decimal, milhar e símbolo R$', async () => {
@@ -111,8 +127,8 @@ describe('Precos/NovaCompra', () => {
     it('escolher uma sugestão preenche a linha com a última compra, e os campos continuam editáveis', async () => {
         const resposta = contract('produtos.index').response;
         resposta.produtos = [
-            { id: 1, nome: 'Café', total_compras: 4, ultima_compra: { quantidade: 1.5, unidade: 'kg', unidades_por_pacote: null, preco_centavos: 3490 } },
-            { id: 2, nome: 'Ovos', total_compras: 2, ultima_compra: { quantidade: 2, unidade: 'pacote', unidades_por_pacote: 6, preco_centavos: 1800 } },
+            { id: 1, nome: 'Café', marca: 'Pilão', total_compras: 4, ultima_compra: { quantidade: 1.5, unidade: 'kg', unidades_por_pacote: null, preco_centavos: 3490 } },
+            { id: 2, nome: 'Ovos', marca: null, total_compras: 2, ultima_compra: { quantidade: 2, unidade: 'pacote', unidades_por_pacote: 6, preco_centavos: 1800 } },
         ];
         axios.get.mockResolvedValue({ data: resposta });
 
@@ -122,10 +138,11 @@ describe('Precos/NovaCompra', () => {
 
         expect(axios.get).toHaveBeenLastCalledWith('/api/precos/produtos', { params: { q: 'ca' } });
         const sugestoes = wrapper.findAll('.sugestao');
-        expect(sugestoes.map((s) => s.text())).toEqual(['Café', 'Ovos']);
+        expect(sugestoes.map((s) => s.text())).toEqual(['Café Pilão', 'Ovos']);
 
         await sugestoes[0].trigger('click');
         expect(campo(wrapper, 'produto').element.value).toBe('Café');
+        expect(campo(wrapper, 'marca').element.value).toBe('Pilão');
         expect(campo(wrapper, 'quantidade').element.value).toBe('1,5');
         expect(campo(wrapper, 'unidade').element.value).toBe('kg');
         expect(campo(wrapper, 'preco_centavos').element.value).toBe('34,90');
@@ -135,6 +152,7 @@ describe('Precos/NovaCompra', () => {
         await campo(wrapper, 'produto').setValue('o');
         await flushPromises();
         await wrapper.findAll('.sugestao')[1].trigger('click');
+        expect(campo(wrapper, 'marca').element.value).toBe('');
         expect(campo(wrapper, 'unidade').element.value).toBe('pacote');
         expect(campo(wrapper, 'unidades_por_pacote').element.value).toBe('6');
         expect(campo(wrapper, 'preco_centavos').element.value).toBe('18,00');
@@ -322,12 +340,12 @@ describe('Precos/NovaCompra', () => {
         const corpo = axios.post.mock.calls[0][1];
         expectShape(corpo, store.request);
         expect(corpo.itens).toHaveLength(15);
-        expect(corpo.itens[14]).toEqual({ produto: 'Produto 14', quantidade: 1, unidade: 'un', unidades_por_pacote: null, preco_centavos: 1500, promocao: false, preco_original_centavos: null });
+        expect(corpo.itens[14]).toEqual({ produto: 'Produto 14', marca: null, quantidade: 1, unidade: 'un', unidades_por_pacote: null, preco_centavos: 1500, promocao: false, preco_original_centavos: null });
     });
 
     describe('repetir última compra', () => {
         const ultimaIda = contract('compras.ultima-ida');
-        const itemIda = (produto, quantidade, unidade, unidades_por_pacote, preco_centavos) => ({ produto, quantidade, unidade, unidades_por_pacote, preco_centavos });
+        const itemIda = (produto, quantidade, unidade, unidades_por_pacote, preco_centavos, marca = null) => ({ produto, marca, quantidade, unidade, unidades_por_pacote, preco_centavos });
         const ida = (...itens) => ({ data: { data: '2026-08-01', itens } });
         const responder = (resposta) =>
             axios.get.mockImplementation(async (url) => (url.includes('ultima-ida') ? resposta : { data: contract('produtos.index').response }));
@@ -347,6 +365,7 @@ describe('Precos/NovaCompra', () => {
             expect(axios.get).toHaveBeenCalledWith('/api/precos/compras/ultima-ida', { params: { mercado: 'Atacadão' } });
             expect(linhas(wrapper)).toBe(1);
             expect(campo(wrapper, 'produto').element.value).toBe('Café');
+            expect(campo(wrapper, 'marca').element.value).toBe('Pilão');
             expect(campo(wrapper, 'quantidade').element.value).toBe('500');
             expect(campo(wrapper, 'unidade').element.value).toBe('g');
             expect(campo(wrapper, 'preco_centavos').element.value).toBe('18,90');

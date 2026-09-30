@@ -14,7 +14,7 @@ describe('Precos/Index', () => {
 
     it('abre com o campo de busca em foco e os mais comprados na ordem recebida, cada um com link para o produto', async () => {
         const resposta = contract('produtos.index').response;
-        resposta.produtos.push({ id: 7, nome: 'Arroz', total_compras: 2 }, { id: 2, nome: 'Leite', total_compras: 1 });
+        resposta.produtos.push({ id: 7, nome: 'Arroz', marca: null, total_compras: 2 }, { id: 2, nome: 'Leite', marca: 'Piracanjuba', total_compras: 1 });
         axios.get.mockResolvedValue({ data: resposta });
 
         const wrapper = mount(Index, { attachTo: document.body });
@@ -23,9 +23,9 @@ describe('Precos/Index', () => {
         expect(document.activeElement).toBe(wrapper.find('input[type=search]').element);
         expect(axios.get).toHaveBeenCalledWith('/api/precos/produtos', { params: { q: '' } });
         expect(links(wrapper)).toEqual([
-            ['Café', '/precos/produtos/1'],
+            ['Café Pilão', '/precos/produtos/1'],
             ['Arroz', '/precos/produtos/7'],
-            ['Leite', '/precos/produtos/2'],
+            ['Leite Piracanjuba', '/precos/produtos/2'],
         ]);
         expect(wrapper.find('a[href="/precos/compras/nova"]').exists()).toBe(true);
         wrapper.unmount();
@@ -46,7 +46,7 @@ describe('Precos/Index', () => {
         await wrapper.find('input[type=search]').setValue('');
         await flushPromises();
 
-        expect(links(wrapper)).toEqual([['Café', '/precos/produtos/1']]);
+        expect(links(wrapper)).toEqual([['Café Pilão', '/precos/produtos/1']]);
     });
 
     it('ignora a resposta atrasada de um texto anterior', async () => {
@@ -57,7 +57,7 @@ describe('Precos/Index', () => {
         await wrapper.find('input[type=search]').setValue('ca');
         await wrapper.find('input[type=search]').setValue('caf');
 
-        pendentes.caf(respostaCom({ id: 1, nome: 'Café', total_compras: 4 }));
+        pendentes.caf(respostaCom({ id: 1, nome: 'Café', marca: null, total_compras: 4 }));
         await flushPromises();
         pendentes.ca(respostaCom({ id: 5, nome: 'Carne', total_compras: 1 }));
         await flushPromises();
