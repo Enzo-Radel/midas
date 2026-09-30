@@ -19,7 +19,9 @@
                 "unidade": "g",
                 "unidades_por_pacote": null,
                 "preco_centavos": 1890,
-                "preco_base_centavos": 3780
+                "preco_base_centavos": 3780,
+                "promocao": true,
+                "preco_original_centavos": 2290
             }
         ],
         "resumo": {
@@ -38,7 +40,8 @@
             "periodo": {
                 "inicio": "2026-07-19",
                 "fim": "2026-09-14"
-            }
+            },
+            "em_promocao": 1
         },
         "mercados": [
             {

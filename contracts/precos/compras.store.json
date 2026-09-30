@@ -8,7 +8,9 @@
                 "quantidade": 500,
                 "unidade": "g",
                 "unidades_por_pacote": null,
-                "preco_centavos": 1890
+                "preco_centavos": 1890,
+                "promocao": true,
+                "preco_original_centavos": 2290
             }
         ]
     },
@@ -23,7 +25,9 @@
                 "quantidade": 500,
                 "unidade": "g",
                 "unidades_por_pacote": null,
-                "preco_centavos": 1890
+                "preco_centavos": 1890,
+                "promocao": true,
+                "preco_original_centavos": 2290
             }
         ]
     }
