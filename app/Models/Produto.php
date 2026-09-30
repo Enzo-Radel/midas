@@ -11,7 +11,7 @@ class Produto extends Model
 {
     public $timestamps = false;
 
-    protected $fillable = ['nome'];
+    protected $fillable = ['nome', 'marca'];
 
     public function compras(): HasMany
     {

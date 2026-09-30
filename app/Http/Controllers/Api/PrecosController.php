@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Compra;
 use App\Models\Mercado;
 use App\Models\Produto;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -19,9 +18,11 @@ class PrecosController extends Controller
     {
         $q = $request->query('q');
         $produtos = Produto::withCount('compras as total_compras')->with('ultimaCompra')
-            ->when(filled($q), fn ($query) => $query
-                ->whereRaw("lower(nome) like ? escape '!'", ['%'.strtr(mb_strtolower($q), ['!' => '!!', '%' => '!%', '_' => '!_']).'%']))
-            ->orderByDesc('total_compras')->orderByRaw('lower(nome)')->get();
+            ->when(filled($q), function ($query) use ($q) {
+                $padrao = '%'.strtr(mb_strtolower($q), ['!' => '!!', '%' => '!%', '_' => '!_']).'%';
+                $query->whereRaw("(lower(nome) like ? escape '!' or lower(marca) like ? escape '!')", [$padrao, $padrao]);
+            })
+            ->orderByDesc('total_compras')->orderByRaw('lower(nome)')->orderByRaw('lower(marca)')->get();
         $produtos->each(fn ($produto) => $produto->ultimaCompra->makeHidden(['id', 'produto_id', 'mercado_id', 'data', 'promocao', 'preco_original_centavos']));
 
         return response()->json(['produtos' => $produtos]);
@@ -80,6 +81,7 @@ class PrecosController extends Controller
             'data' => ['required', 'date_format:Y-m-d'],
             'itens' => ['required', 'array'],
             'itens.*.produto' => ['required', 'string', 'max:255'],
+            'itens.*.marca' => ['nullable', 'string', 'max:255'],
             'itens.*.quantidade' => ['required', 'numeric', 'gt:0'],
             'itens.*.unidade' => ['required', Rule::in(array_keys(Compra::UNIDADES))],
             'itens.*.unidades_por_pacote' => ['required_if:itens.*.unidade,pacote', 'nullable', 'integer', 'min:1'],
@@ -88,13 +90,13 @@ class PrecosController extends Controller
             'itens.*.preco_original_centavos' => ['nullable', 'integer', 'gt:0'],
         ]);
 
-        // A unidade base de um produto vem da primeira compra dele, inclusive dentro do próprio lote.
+        // A unidade base de um produto (nome e marca) vem da primeira compra dele, inclusive dentro do próprio lote.
         $bases = [];
         $erros = [];
         foreach ($dados['itens'] as $i => $item) {
             $familia = Compra::UNIDADES[$item['unidade']][0];
-            $base = $bases[mb_strtolower($item['produto'])] ??=
-                $this->buscarPorNome(Produto::class, $item['produto'])?->unidade_base ?? $familia;
+            $base = $bases[json_encode([mb_strtolower($item['produto']), mb_strtolower($item['marca'] ?? '')])] ??=
+                $this->buscarProduto($item['produto'], $item['marca'] ?? null)?->unidade_base ?? $familia;
             if ($base !== $familia) {
                 $erros["itens.{$i}.unidade"] = "A unidade deve ser compatível com a do produto, que é medido em {$base}.";
             }
@@ -103,15 +105,16 @@ class PrecosController extends Controller
             throw ValidationException::withMessages($erros);
         }
 
-        $mercado = $this->buscarPorNome(Mercado::class, $dados['mercado'])
+        $mercado = $this->buscarMercado($dados['mercado'])
             ?? Mercado::create(['nome' => $dados['mercado']]);
 
         $compras = array_map(function ($item) use ($dados, $mercado) {
-            $produto = $this->buscarPorNome(Produto::class, $item['produto'])
-                ?? Produto::create(['nome' => $item['produto']]);
+            $marca = $item['marca'] ?? null;
+            $produto = $this->buscarProduto($item['produto'], $marca)
+                ?? Produto::create(['nome' => $item['produto'], 'marca' => $marca]);
 
             return Compra::create([
-                ...Arr::except($item, 'produto'),
+                ...Arr::except($item, ['produto', 'marca']),
                 'preco_original_centavos' => $item['promocao'] ? $item['preco_original_centavos'] ?? null : null,
                 'data' => $dados['data'],
                 'produto_id' => $produto->id,
@@ -125,7 +128,7 @@ class PrecosController extends Controller
     public function ultimaIda(Request $request): JsonResponse
     {
         $nome = $request->query('mercado');
-        $mercado = filled($nome) ? $this->buscarPorNome(Mercado::class, $nome) : null;
+        $mercado = filled($nome) ? $this->buscarMercado($nome) : null;
         // Sem mercado, `where(..., null)` vira IS NULL e não acha nada: data nula e itens vazios.
         $compras = Compra::with('produto')->where('mercado_id', $mercado?->id);
         $data = $compras->max('data');
@@ -135,12 +138,23 @@ class PrecosController extends Controller
             'itens' => $compras->where('data', $data)->orderBy('id')->get()->map(fn ($compra) => [
                 'produto' => $compra->produto->nome,
                 ...$compra->only(['quantidade', 'unidade', 'unidades_por_pacote', 'preco_centavos']),
+                'marca' => $compra->produto->marca,
             ]),
         ]);
     }
 
-    private function buscarPorNome(string $modelo, string $nome): ?Model
+    private function buscarMercado(string $nome): ?Mercado
     {
-        return $modelo::whereRaw('lower(nome) = ?', [mb_strtolower($nome)])->first();
+        return Mercado::whereRaw('lower(nome) = ?', [mb_strtolower($nome)])->first();
+    }
+
+    private function buscarProduto(string $nome, ?string $marca): ?Produto
+    {
+        return Produto::whereRaw('lower(nome) = ?', [mb_strtolower($nome)])
+            ->when(
+                $marca === null,
+                fn ($query) => $query->whereNull('marca'),
+                fn ($query) => $query->whereRaw('lower(marca) = ?', [mb_strtolower($marca)]),
+            )->first();
     }
 }

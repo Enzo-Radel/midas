@@ -19,6 +19,7 @@ return [
 
     'attributes' => [
         'itens.*.produto' => 'produto',
+        'itens.*.marca' => 'marca',
         'itens.*.quantidade' => 'quantidade',
         'itens.*.unidade' => 'unidade',
         'itens.*.unidades_por_pacote' => 'unidades por pacote',

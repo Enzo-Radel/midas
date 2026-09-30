@@ -178,6 +178,7 @@ class PrecosTest extends TestCase
             'unidade' => [null, 'xícara'],
             'unidades_por_pacote' => [null, 0, 'abc'],
             'preco_centavos' => [null, 'abc', 0, -5, 18.9],
+            'marca' => [str_repeat('a', 256)],
             'promocao' => [null, 'abc'],
             'preco_original_centavos' => ['abc', 0, -5, 18.9],
         ];
@@ -468,6 +469,7 @@ class PrecosTest extends TestCase
         $this->assertSame(500.0, (float) $response->json('itens.0.quantidade'));
         $this->assertSame([null, 6], array_column($response->json('itens'), 'unidades_por_pacote'));
         $this->assertSame([1890, 900], array_column($response->json('itens'), 'preco_centavos'));
+        $this->assertSame(['Pilão', 'Pilão'], array_column($response->json('itens'), 'marca'));
     }
 
     public function test_ultima_ida_de_mercado_desconhecido_vazio_ou_ausente_devolve_vazio_sem_criar_nada(): void
@@ -547,6 +549,78 @@ class PrecosTest extends TestCase
         $this->assertEquals(
             array_map(fn ($c) => Arr::only($c, ['data', 'mercado', 'preco_base_centavos']), $sem['compras']),
             array_map(fn ($c) => Arr::only($c, ['data', 'mercado', 'preco_base_centavos']), $com['compras']),
+        );
+    }
+
+    public function test_marcas_diferentes_sao_produtos_independentes_com_historicos_separados(): void
+    {
+        foreach ([['Pilão', 3000], ['Pilão', 3200], ['Melitta', 2000], ['Melitta', 2200], [null, 1000]] as [$marca, $preco]) {
+            $this->registrar(['marca' => $marca, 'quantidade' => 1, 'unidade' => 'kg', 'preco_centavos' => $preco]);
+        }
+        $this->registrar(['marca' => 'Melitta', 'mercado' => 'Bairro', 'quantidade' => 1, 'unidade' => 'kg', 'preco_centavos' => 2400]);
+
+        $this->assertSame(3, Produto::count());
+
+        $pilao = $this->getJson('/api/precos/produtos/1');
+        $melitta = $this->getJson('/api/precos/produtos/2');
+        $semMarca = $this->getJson('/api/precos/produtos/3');
+
+        $this->assertContract($pilao, 'produtos.show');
+        $this->assertSame(['Pilão', 'Melitta', null], [$pilao->json('produto.marca'), $melitta->json('produto.marca'), $semMarca->json('produto.marca')]);
+        $this->assertSame([2, 3, 1], [$pilao->json('resumo.contagem'), $melitta->json('resumo.contagem'), $semMarca->json('resumo.contagem')]);
+        $this->assertEquals([3100, 2200, 1000], [$pilao->json('resumo.mediana_centavos'), $melitta->json('resumo.mediana_centavos'), $semMarca->json('resumo.mediana_centavos')]);
+        $this->assertCount(1, $pilao->json('mercados'));
+        $this->assertCount(2, $melitta->json('mercados'));
+    }
+
+    public function test_unidade_base_e_por_marca(): void
+    {
+        $this->registrar(['marca' => 'Pilão', 'unidade' => 'g']);
+        $this->registrar(['marca' => 'Melitta', 'unidade' => 'un'])->assertCreated();
+
+        $this->assertSame(['kg', 'un'], [
+            $this->getJson('/api/precos/produtos/1')->json('produto.unidade_base'),
+            $this->getJson('/api/precos/produtos/2')->json('produto.unidade_base'),
+        ]);
+    }
+
+    public function test_identidade_por_nome_e_marca_ignora_caixa_espacos_e_marca_vazia(): void
+    {
+        $this->registrar(['marca' => 'Pilão']);
+        $this->registrar(['produto' => ' café ', 'marca' => ' PILÃO ']);
+        $this->assertSame(1, Produto::count());
+
+        $this->registrar(['marca' => null]);
+        $this->registrar(['marca' => '   ']);
+        $this->registrar(['marca' => '']);
+
+        $this->assertSame(2, Produto::count());
+        $this->assertSame(3, Produto::whereNull('marca')->first()->compras()->count());
+    }
+
+    public function test_busca_encontra_por_nome_ou_marca_e_empate_ordena_por_nome_e_marca(): void
+    {
+        $this->registrar(['produto' => 'Café', 'marca' => 'Pilão']);
+        $this->registrar(['produto' => 'Café', 'marca' => 'Melitta']);
+        $this->registrar(['produto' => 'Arroz', 'marca' => 'Tio João']);
+
+        $porMarca = $this->getJson('/api/precos/produtos?q=pilão');
+        $this->assertContract($porMarca, 'produtos.index');
+        $this->assertSame([['Café', 'Pilão']], array_map(fn ($p) => [$p['nome'], $p['marca']], $porMarca->json('produtos')));
+
+        $porNome = $this->getJson('/api/precos/produtos?q=caf')->json('produtos');
+        $this->assertSame(['Melitta', 'Pilão'], array_column($porNome, 'marca'));
+
+        $todos = $this->getJson('/api/precos/produtos')->json('produtos');
+        $this->assertSame(['Arroz', 'Café', 'Café'], array_column($todos, 'nome'));
+        $this->assertSame(['Tio João', 'Melitta', 'Pilão'], array_column($todos, 'marca'));
+    }
+
+    public function test_marca_longa_demais_da_mensagem_em_portugues(): void
+    {
+        $this->assertSame(
+            'O campo marca não pode ter mais de 255 caracteres.',
+            $this->erro($this->registrar(['marca' => str_repeat('a', 256)]), 'itens.0.marca'),
         );
     }
 
