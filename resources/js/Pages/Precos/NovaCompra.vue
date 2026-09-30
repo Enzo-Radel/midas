@@ -4,7 +4,8 @@ import axios from 'axios';
 import { router } from '@inertiajs/vue3';
 import AppLayout from '../../Layouts/AppLayout.vue';
 
-const form = reactive({ produto: '', mercado: '', data: '', quantidade: '', unidade: 'kg', preco: '' });
+const form = reactive({ produto: '', mercado: '', data: '', quantidade: '', unidade: 'kg', unidades_por_pacote: '', preco: '' });
+const unidades = [['kg', 'kg'], ['g', 'g'], ['L', 'L'], ['ml', 'ml'], ['un', 'un'], ['duzia', 'dúzia'], ['pacote', 'pacote']];
 const errors = ref({});
 const enviando = ref(false);
 
@@ -26,6 +27,7 @@ async function salvar() {
             data: form.data,
             quantidade: numero(form.quantidade),
             unidade: form.unidade,
+            unidades_por_pacote: form.unidade === 'pacote' ? numero(form.unidades_por_pacote) : null,
             preco_centavos: Math.round(numero(form.preco) * 100),
         });
 
@@ -74,9 +76,15 @@ async function salvar() {
             <label class="field">
                 <span class="label">Unidade</span>
                 <select v-model="form.unidade" name="unidade" class="input">
-                    <option v-for="unidade in ['kg', 'g', 'L', 'ml', 'un']" :key="unidade" :value="unidade">{{ unidade }}</option>
+                    <option v-for="[valor, rotulo] in unidades" :key="valor" :value="valor">{{ rotulo }}</option>
                 </select>
                 <span v-if="errors.unidade" class="error">{{ errors.unidade[0] }}</span>
+            </label>
+
+            <label v-if="form.unidade === 'pacote'" class="field">
+                <span class="label">Unidades por pacote</span>
+                <input v-model="form.unidades_por_pacote" name="unidades_por_pacote" class="input" type="text" inputmode="numeric" />
+                <span v-if="errors.unidades_por_pacote" class="error">{{ errors.unidades_por_pacote[0] }}</span>
             </label>
 
             <label class="field">

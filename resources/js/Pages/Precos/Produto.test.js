@@ -31,6 +31,7 @@ describe('Precos/Produto', () => {
         expect(linhas[0]).toContain('Atacadão');
         expect(linhas[0]).toContain('500 g');
         expect(linhas[0]).toContain('R$ 18,90');
+        expect(linhas[0]).toContain('R$ 37,80/kg');
         expect(linhas[1]).toContain('02/08/2026');
         expect(linhas[1]).toContain('Mercado Central');
         expect(linhas[1]).toContain('1,5 kg');
@@ -38,5 +39,25 @@ describe('Precos/Produto', () => {
         expect(linhas[2]).toContain('30/07/2026');
         expect(linhas[2]).toContain('2 un');
         expect(linhas[2]).toContain('R$ 1.234,56');
+    });
+
+    it('mostra quantidade legível em dúzia e pacote e o preço por unidade base do produto', async () => {
+        const resposta = contract('produtos.show').response;
+        const modelo = resposta.compras[0];
+        resposta.produto = { id: 2, nome: 'Ovos', unidade_base: 'un' };
+        resposta.compras = [
+            { ...modelo, id: 2, quantidade: 1, unidade: 'duzia', unidades_por_pacote: null, preco_centavos: 1200, preco_base_centavos: 100 },
+            { ...modelo, id: 1, quantidade: 2, unidade: 'pacote', unidades_por_pacote: 6, preco_centavos: 1800, preco_base_centavos: 150 },
+        ];
+        axios.get.mockResolvedValue({ data: resposta });
+
+        const wrapper = mount(Produto, { props: { produtoId: 2 } });
+        await flushPromises();
+
+        const linhas = wrapper.findAll('li').map((li) => li.text().replace(/\s+/g, ' '));
+        expect(linhas[0]).toContain('1 dúzia');
+        expect(linhas[0]).toContain('R$ 1,00/un');
+        expect(linhas[1]).toContain('2 pacote (6 un)');
+        expect(linhas[1]).toContain('R$ 1,50/un');
     });
 });

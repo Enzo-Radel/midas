@@ -19,6 +19,8 @@ axios.get(`/api/precos/produtos/${props.produtoId}`).then(({ data }) => {
 });
 
 const data = (iso) => iso.split('-').reverse().join('/');
+const quantidade = (c) =>
+    `${c.quantidade.toLocaleString('pt-BR')} ${c.unidade === 'duzia' ? 'dúzia' : c.unidade}${c.unidades_por_pacote ? ` (${c.unidades_por_pacote} un)` : ''}`;
 const reais = (centavos) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(centavos / 100);
 </script>
 
@@ -32,9 +34,12 @@ const reais = (centavos) => new Intl.NumberFormat('pt-BR', { style: 'currency', 
                     <div class="info">
                         <span class="data">{{ data(compra.data) }}</span>
                         <span class="mercado">{{ compra.mercado.nome }}</span>
-                        <span class="quantidade">{{ compra.quantidade.toLocaleString('pt-BR') }} {{ compra.unidade }}</span>
+                        <span class="quantidade">{{ quantidade(compra) }}</span>
                     </div>
-                    <span class="preco">{{ reais(compra.preco_centavos) }}</span>
+                    <div class="precos">
+                        <span class="preco">{{ reais(compra.preco_centavos) }}</span>
+                        <span class="preco-base">{{ reais(compra.preco_base_centavos) }}/{{ produto.unidade_base }}</span>
+                    </div>
                 </li>
             </ul>
         </template>
@@ -78,6 +83,16 @@ const reais = (centavos) => new Intl.NumberFormat('pt-BR', { style: 'currency', 
 .data {
     font-weight: 600;
     color: #1f2937;
+}
+
+.precos {
+    display: grid;
+    justify-items: end;
+}
+
+.preco-base {
+    font-size: 0.875rem;
+    color: #6b7280;
 }
 
 .preco {

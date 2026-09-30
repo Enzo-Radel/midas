@@ -39,6 +39,7 @@ describe('Precos/NovaCompra', () => {
             data: '2026-09-14',
             quantidade: 500,
             unidade: 'g',
+            unidades_por_pacote: null,
             preco_centavos: 1890,
         });
         expect(router.visit).toHaveBeenCalledWith('/precos/produtos/1');
@@ -90,9 +91,65 @@ describe('Precos/NovaCompra', () => {
         expect(router.visit).not.toHaveBeenCalled();
     });
 
-    it('oferece as unidades do contrato sem dúzia', () => {
-        const valores = mount(NovaCompra).findAll('select[name=unidade] option').map((o) => o.element.value);
+    it('oferece as unidades do contrato, inclusive dúzia e pacote', () => {
+        const opcoes = mount(NovaCompra).findAll('select[name=unidade] option');
 
-        expect(valores).toEqual(['kg', 'g', 'L', 'ml', 'un']);
+        expect(opcoes.map((o) => o.element.value)).toEqual(['kg', 'g', 'L', 'ml', 'un', 'duzia', 'pacote']);
+        expect(opcoes[5].text()).toBe('dúzia');
+    });
+
+    it('pede unidades por pacote só quando a unidade é pacote e envia o valor como número', async () => {
+        const store = contract('compras.store');
+        axios.post.mockResolvedValue({ data: store.response });
+
+        const wrapper = mount(NovaCompra);
+        await preencher(wrapper);
+        expect(wrapper.find('input[name=unidades_por_pacote]').exists()).toBe(false);
+
+        await wrapper.find('select[name=unidade]').setValue('pacote');
+        await wrapper.find('input[name=quantidade]').setValue('2');
+        await wrapper.find('input[name=unidades_por_pacote]').setValue('6');
+        expect(wrapper.text()).toContain('Unidades por pacote');
+        await wrapper.find('form').trigger('submit');
+        await flushPromises();
+
+        const corpo = axios.post.mock.calls[0][1];
+        expectShape(corpo, store.request);
+        expect(corpo).toMatchObject({ quantidade: 2, unidade: 'pacote', unidades_por_pacote: 6 });
+    });
+
+    it('envia unidades_por_pacote nulo ao trocar de pacote para outra unidade', async () => {
+        axios.post.mockResolvedValue({ data: contract('compras.store').response });
+
+        const wrapper = mount(NovaCompra);
+        await preencher(wrapper);
+        await wrapper.find('select[name=unidade]').setValue('pacote');
+        await wrapper.find('input[name=unidades_por_pacote]').setValue('6');
+        await wrapper.find('select[name=unidade]').setValue('duzia');
+        await wrapper.find('form').trigger('submit');
+        await flushPromises();
+
+        expect(axios.post.mock.calls[0][1]).toMatchObject({ unidade: 'duzia', unidades_por_pacote: null });
+    });
+
+    it('mostra o erro 422 de unidade e de unidades_por_pacote ao lado de cada campo', async () => {
+        axios.post.mockRejectedValue({
+            response: {
+                status: 422,
+                data: {
+                    message: 'inválido',
+                    errors: { unidade: ['Este produto é vendido em kg.'], unidades_por_pacote: ['Informe as unidades do pacote.'] },
+                },
+            },
+        });
+
+        const wrapper = mount(NovaCompra);
+        await preencher(wrapper);
+        await wrapper.find('select[name=unidade]').setValue('pacote');
+        await wrapper.find('form').trigger('submit');
+        await flushPromises();
+
+        expect(wrapper.find('select[name=unidade]').element.closest('label').textContent).toContain('Este produto é vendido em kg.');
+        expect(wrapper.find('input[name=unidades_por_pacote]').element.closest('label').textContent).toContain('Informe as unidades do pacote.');
     });
 });
