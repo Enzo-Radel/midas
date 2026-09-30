@@ -65,3 +65,11 @@ Cada produto tem uma **unidade base** (`kg`, `L` ou `un`), definida pela unidade
 - Consultar nunca cria nem altera registro: só `GET`.
 - Página `/precos` (`Precos/Index`) vira a tela de consulta: campo de busca em foco ao abrir, sugestões logo abaixo a cada mudança do texto (a resposta mais recente é a que vale, respostas atrasadas de texto anterior são ignoradas) e, sem texto, a lista dos mais comprados. Tocar em uma sugestão abre o produto com o resumo. O link "Registrar compra" continua na página. Campo e sugestões com alvos de toque grandes, usáveis com uma mão no celular.
 - Menu no celular: abaixo de 768 px o menu lateral hoje some e não há como abri-lo, então "Preços" só seria alcançável pela URL. Um botão de menu visível nessa largura abre e fecha o menu lateral (o item "Preços" precisa ser alcançável e tocável no celular).
+
+### Etapa 5: comparar o preço entre mercados
+
+- `GET /api/precos/produtos/{id}` (`produtos.show`) ganha `mercados`: uma linha por mercado onde o produto já foi comprado (basta uma compra), ordenada da menor para a maior mediana (empate: nome do mercado em ordem alfabética):
+  - `mercado` (`id`, `nome`), `mediana_centavos` (mediana do preço por unidade base das compras **daquele mercado**, 2 casas), `contagem` (compras naquele mercado).
+  - `diferenca_percentual`: `(mediana - menor mediana) / menor mediana * 100`, arredondado a 1 casa. O mercado mais barato tem `0`. Produto comprado em um só mercado: `null` (sem diferença a mostrar).
+- Exemplos que viram testes: medianas R$ 37,20 (Atacadão) e R$ 39,10 (bairro) dão `0` e `5.1`; mercado com uma única compra aparece com `contagem` 1; produto em um só mercado traz uma linha com `diferenca_percentual` nulo. `resumo` e `compras` não mudam.
+- Tela (`Precos/Produto`): abaixo do resumo e acima do histórico, a lista "Por mercado" na mesma ordem recebida: nome do mercado, mediana no formato `R$ 37,20/kg`, contagem ("9 compras", "1 compra") e a diferença: `+5,1%` (vírgula decimal, com sinal) ou, para diferença `0` com mais de um mercado na lista, o rótulo "melhor"; com um só mercado na lista (diferença nula) não aparece nada de diferença. Sem recomendação, destaque de cor por "bom/ruim" nem limiar.

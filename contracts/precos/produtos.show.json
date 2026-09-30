@@ -39,6 +39,26 @@
                 "inicio": "2026-07-19",
                 "fim": "2026-09-14"
             }
-        }
+        },
+        "mercados": [
+            {
+                "mercado": {
+                    "id": 1,
+                    "nome": "Atacadão"
+                },
+                "mediana_centavos": 3720,
+                "contagem": 9,
+                "diferenca_percentual": 0
+            },
+            {
+                "mercado": {
+                    "id": 2,
+                    "nome": "Mercado do bairro"
+                },
+                "mediana_centavos": 3910,
+                "contagem": 6,
+                "diferenca_percentual": 5.1
+            }
+        ]
     }
 }
