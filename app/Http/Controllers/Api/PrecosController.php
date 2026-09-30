@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class PrecosController extends Controller
 {
@@ -25,9 +26,9 @@ class PrecosController extends Controller
     {
         $compras = $produto->compras()->with('mercado')
             ->orderByDesc('data')->orderByDesc('id')->get()
-            ->makeHidden(['produto_id', 'mercado_id']);
+            ->makeHidden(['produto_id', 'mercado_id'])->append('preco_base_centavos');
 
-        return response()->json(['produto' => $produto, 'compras' => $compras]);
+        return response()->json(['produto' => $produto->append('unidade_base'), 'compras' => $compras]);
     }
 
     public function registrar(Request $request): JsonResponse
@@ -37,22 +38,34 @@ class PrecosController extends Controller
             'mercado' => ['required', 'string', 'max:255'],
             'data' => ['required', 'date_format:Y-m-d'],
             'quantidade' => ['required', 'numeric', 'gt:0'],
-            'unidade' => ['required', Rule::in(['kg', 'g', 'L', 'ml', 'un'])],
+            'unidade' => ['required', Rule::in(array_keys(Compra::UNIDADES))],
+            'unidades_por_pacote' => ['required_if:unidade,pacote', 'nullable', 'integer', 'min:1'],
             'preco_centavos' => ['required', 'integer', 'gt:0'],
         ]);
 
+        $produto = $this->buscarPorNome(Produto::class, $dados['produto']);
+        $base = $produto?->unidade_base;
+        if ($base && $base !== Compra::UNIDADES[$dados['unidade']][0]) {
+            throw ValidationException::withMessages([
+                'unidade' => "A unidade deve ser compatível com a do produto, que é medido em {$base}.",
+            ]);
+        }
+
+        $produto ??= Produto::create(['nome' => $dados['produto']]);
+        $mercado = $this->buscarPorNome(Mercado::class, $dados['mercado'])
+            ?? Mercado::create(['nome' => $dados['mercado']]);
+
         $compra = Compra::create([
             ...Arr::except($dados, ['produto', 'mercado']),
-            'produto_id' => $this->porNome(Produto::class, $dados['produto'])->id,
-            'mercado_id' => $this->porNome(Mercado::class, $dados['mercado'])->id,
+            'produto_id' => $produto->id,
+            'mercado_id' => $mercado->id,
         ]);
 
         return response()->json(['compra' => $compra], 201);
     }
 
-    private function porNome(string $modelo, string $nome): Model
+    private function buscarPorNome(string $modelo, string $nome): ?Model
     {
-        return $modelo::whereRaw('lower(nome) = ?', [mb_strtolower($nome)])->first()
-            ?? $modelo::create(['nome' => $nome]);
+        return $modelo::whereRaw('lower(nome) = ?', [mb_strtolower($nome)])->first();
     }
 }

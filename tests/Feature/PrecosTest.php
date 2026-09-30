@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Mercado;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia;
@@ -104,13 +105,14 @@ class PrecosTest extends TestCase
             'mercado' => [null, '   ', str_repeat('a', 256)],
             'data' => [null, '14/09/2026', '2026-13-45'],
             'quantidade' => [null, 'abc', 0, -1],
-            'unidade' => [null, 'xícara', 'duzia'],
+            'unidade' => [null, 'xícara'],
+            'unidades_por_pacote' => [null, 0, 'abc'],
             'preco_centavos' => [null, 'abc', 0, -5, 18.9],
         ];
 
         foreach ($invalidos as $campo => $valores) {
             foreach ($valores as $valor) {
-                $this->registrar([$campo => $valor])
+                $this->registrar([$campo => $valor, ...($campo === 'unidades_por_pacote' ? ['unidade' => 'pacote'] : [])])
                     ->assertUnprocessable()
                     ->assertJsonValidationErrors($campo);
             }
@@ -133,6 +135,59 @@ class PrecosTest extends TestCase
 
         $this->registrar(['produto' => null, 'mercado' => null])
             ->assertJsonPath('message', 'O campo produto é obrigatório. (e mais 1 erro)');
+    }
+
+    public function test_calcula_o_preco_por_unidade_base(): void
+    {
+        $casos = [
+            // produto, quantidade, unidade, unidades_por_pacote, preço pago, unidade base, preço base
+            ['Café', 500, 'g', null, 1890, 'kg', 3780],
+            ['Café', 1, 'kg', null, 3490, 'kg', 3490],
+            ['Leite', 500, 'ml', null, 300, 'L', 600],
+            ['Ovos', 1, 'duzia', null, 1200, 'un', 100],
+            ['Biscoito', 1, 'pacote', 6, 900, 'un', 150],
+        ];
+
+        foreach ($casos as [$produto, $quantidade, $unidade, $porPacote, $preco, $base, $precoBase]) {
+            $id = $this->registrar([
+                'produto' => $produto, 'quantidade' => $quantidade, 'unidade' => $unidade,
+                'unidades_por_pacote' => $porPacote, 'preco_centavos' => $preco,
+            ])->assertCreated()->json('compra.produto_id');
+
+            $response = $this->getJson("/api/precos/produtos/{$id}");
+
+            $this->assertContract($response, 'produtos.show');
+            $this->assertSame($base, $response->json('produto.unidade_base'));
+            $this->assertEquals($precoBase, $response->json('compras.0.preco_base_centavos'));
+        }
+    }
+
+    public function test_rejeita_unidade_de_outra_familia_que_a_do_produto(): void
+    {
+        $this->registrar(['produto' => 'Ovos', 'unidade' => 'un']);
+        $this->registrar(['produto' => 'Café', 'unidade' => 'g']);
+        $mercados = Mercado::count();
+
+        $this->registrar(['produto' => 'ovos', 'mercado' => 'Novo', 'unidade' => 'g'])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.unidade.0', 'A unidade deve ser compatível com a do produto, que é medido em un.');
+        $this->registrar(['produto' => 'Café', 'unidade' => 'duzia'])
+            ->assertJsonPath('errors.unidade.0', 'A unidade deve ser compatível com a do produto, que é medido em kg.');
+
+        $this->assertDatabaseCount('compras', 2);
+        $this->assertSame($mercados, Mercado::count());
+    }
+
+    public function test_unidades_por_pacote_so_e_obrigatorio_para_pacote(): void
+    {
+        $this->registrar(['unidade' => 'pacote', 'unidades_por_pacote' => null])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.unidades_por_pacote.0', 'O campo unidades por pacote é obrigatório quando unidade é pacote.');
+        $this->registrar(['unidade' => 'pacote', 'unidades_por_pacote' => 0])
+            ->assertJsonPath('errors.unidades_por_pacote.0', 'O campo unidades por pacote deve ser no mínimo 1.');
+
+        $this->registrar(['produto' => 'Biscoito', 'unidade' => 'pacote', 'unidades_por_pacote' => 6])->assertCreated();
+        $this->registrar(['unidade' => 'kg', 'unidades_por_pacote' => null])->assertCreated();
     }
 
     public function test_paginas_renderizam_o_componente_com_as_props_do_contrato(): void
