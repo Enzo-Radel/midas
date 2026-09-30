@@ -2,7 +2,7 @@
     "request": null,
     "status": 200,
     "response": {
-        "produto": { "id": 1, "nome": "Café" },
+        "produto": { "id": 1, "nome": "Café", "unidade_base": "kg" },
         "compras": [
             {
                 "id": 3,
@@ -10,7 +10,9 @@
                 "mercado": { "id": 1, "nome": "Atacadão" },
                 "quantidade": 500,
                 "unidade": "g",
-                "preco_centavos": 1890
+                "unidades_por_pacote": null,
+                "preco_centavos": 1890,
+                "preco_base_centavos": 3780
             }
         ]
     }
