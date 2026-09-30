@@ -9,7 +9,8 @@
                 "quantidade": 500,
                 "unidade": "g",
                 "unidades_por_pacote": null,
-                "preco_centavos": 1890
+                "preco_centavos": 1890,
+                "marca": "Pilão"
             }
         ]
     }

@@ -10,7 +10,8 @@
                 "unidades_por_pacote": null,
                 "preco_centavos": 1890,
                 "promocao": true,
-                "preco_original_centavos": 2290
+                "preco_original_centavos": 2290,
+                "marca": "Pilão"
             }
         ]
     },
