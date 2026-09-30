@@ -451,6 +451,39 @@ class PrecosTest extends TestCase
         $this->assertEquals([0, 100, 100], array_column($mercados, 'diferenca_percentual'));
     }
 
+    public function test_ultima_ida_devolve_os_itens_da_data_mais_recente_do_mercado(): void
+    {
+        $this->registrar(['mercado' => 'Atacadão', 'data' => '2026-09-10', 'produto' => 'Arroz']);
+        $this->registrar(['mercado' => 'Atacadão', 'data' => '2026-09-20', 'produto' => 'Café']);
+        $this->registrar(['mercado' => 'Bairro', 'data' => '2026-09-25', 'produto' => 'Leite', 'quantidade' => 1, 'unidade' => 'L']);
+        $this->registrar(['mercado' => 'Atacadão', 'data' => '2026-09-20', 'produto' => 'Biscoito', 'quantidade' => 2, 'unidade' => 'pacote', 'unidades_por_pacote' => 6, 'preco_centavos' => 900]);
+
+        $response = $this->getJson('/api/precos/compras/ultima-ida?mercado='.urlencode('ATACADÃO'));
+
+        $this->assertContract($response, 'compras.ultima-ida');
+        $this->assertSame('2026-09-20', $response->json('data'));
+        $this->assertSame(['Café', 'Biscoito'], array_column($response->json('itens'), 'produto'));
+        $this->assertSame(500.0, (float) $response->json('itens.0.quantidade'));
+        $this->assertSame([null, 6], array_column($response->json('itens'), 'unidades_por_pacote'));
+        $this->assertSame([1890, 900], array_column($response->json('itens'), 'preco_centavos'));
+    }
+
+    public function test_ultima_ida_de_mercado_desconhecido_vazio_ou_ausente_devolve_vazio_sem_criar_nada(): void
+    {
+        $this->registrar();
+        $antes = $this->contagens();
+
+        foreach (['?mercado=Desconhecido', '?mercado=', ''] as $consulta) {
+            $response = $this->getJson('/api/precos/compras/ultima-ida'.$consulta);
+
+            $this->assertContract($response, 'compras.ultima-ida');
+            $this->assertNull($response->json('data'));
+            $this->assertSame([], $response->json('itens'));
+        }
+
+        $this->assertSame($antes, $this->contagens());
+    }
+
     public function test_paginas_renderizam_o_componente_com_as_props_do_contrato(): void
     {
         foreach ($this->contract('paginas') as $rota => $pagina) {

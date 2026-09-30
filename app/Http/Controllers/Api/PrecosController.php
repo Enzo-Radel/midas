@@ -118,6 +118,23 @@ class PrecosController extends Controller
         return response()->json(['compras' => $compras], 201);
     }
 
+    public function ultimaIda(Request $request): JsonResponse
+    {
+        $nome = $request->query('mercado');
+        $mercado = filled($nome) ? $this->buscarPorNome(Mercado::class, $nome) : null;
+        // Sem mercado, `where(..., null)` vira IS NULL e não acha nada: data nula e itens vazios.
+        $compras = Compra::with('produto')->where('mercado_id', $mercado?->id);
+        $data = $compras->max('data');
+
+        return response()->json([
+            'data' => $data,
+            'itens' => $compras->where('data', $data)->orderBy('id')->get()->map(fn ($compra) => [
+                'produto' => $compra->produto->nome,
+                ...$compra->only(['quantidade', 'unidade', 'unidades_por_pacote', 'preco_centavos']),
+            ]),
+        ]);
+    }
+
     private function buscarPorNome(string $modelo, string $nome): ?Model
     {
         return $modelo::whereRaw('lower(nome) = ?', [mb_strtolower($nome)])->first();

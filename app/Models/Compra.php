@@ -31,6 +31,11 @@ class Compra extends Model
         ];
     }
 
+    public function produto(): BelongsTo
+    {
+        return $this->belongsTo(Produto::class);
+    }
+
     public function mercado(): BelongsTo
     {
         return $this->belongsTo(Mercado::class);

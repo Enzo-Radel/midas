@@ -30,5 +30,6 @@ Route::prefix('cripto')->group(function () {
 Route::prefix('precos')->group(function () {
     Route::get('/produtos', [PrecosController::class, 'produtos']);
     Route::get('/produtos/{produto}', [PrecosController::class, 'produto']);
+    Route::get('/compras/ultima-ida', [PrecosController::class, 'ultimaIda']);
     Route::post('/compras', [PrecosController::class, 'registrar']);
 });
