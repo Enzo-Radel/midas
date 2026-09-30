@@ -624,6 +624,80 @@ class PrecosTest extends TestCase
         );
     }
 
+    private function compra(string $produto, string $mercado, int $centavos, array $campos = []): void
+    {
+        $this->registrar([
+            'produto' => $produto, 'mercado' => $mercado, 'quantidade' => 1, 'unidade' => 'kg',
+            'preco_centavos' => $centavos, ...$campos,
+        ])->assertCreated();
+    }
+
+    public function test_diferencas_ordena_da_maior_para_a_menor_e_usa_a_mediana_por_mercado(): void
+    {
+        $this->compra('Arroz', 'Atacadão', 3720);
+        $this->compra('Arroz', 'Bairro', 3910);
+        $this->registrar(['produto' => 'Café', 'mercado' => 'Atacadão', 'quantidade' => 500, 'unidade' => 'g', 'preco_centavos' => 1860, 'promocao' => false]); // 3720/kg
+        $this->compra('Café', 'Atacadão', 3720, ['promocao' => true]);
+        $this->compra('Café', 'Bairro', 4450);
+        $this->compra('Feijão', 'Atacadão', 900);
+
+        $response = $this->getJson('/api/precos/diferencas');
+        $produtos = $response->json('produtos');
+
+        $this->assertContract($response, 'diferencas.index');
+        $this->assertSame(['Café', 'Arroz'], array_column(array_column($produtos, 'produto'), 'nome'));
+        $this->assertEquals([19.6, 5.1], array_column($produtos, 'diferenca_percentual'));
+        $this->assertSame(['Pilão', 'kg'], [$produtos[0]['produto']['marca'], $produtos[0]['produto']['unidade_base']]);
+        $this->assertSame(['Atacadão', 'Bairro'], [$produtos[0]['menor']['mercado']['nome'], $produtos[0]['maior']['mercado']['nome']]);
+        $this->assertEquals([3720, 4450], [$produtos[0]['menor']['mediana_centavos'], $produtos[0]['maior']['mediana_centavos']]);
+
+        $mercados = $this->getJson('/api/precos/produtos/'.$produtos[0]['produto']['id'])->json('mercados');
+        $this->assertEquals(
+            [$mercados[0]['mediana_centavos'], $mercados[1]['mediana_centavos']],
+            [$produtos[0]['menor']['mediana_centavos'], $produtos[0]['maior']['mediana_centavos']],
+        );
+    }
+
+    public function test_diferencas_trata_marcas_como_itens_diferentes_e_desempata_por_nome_e_marca(): void
+    {
+        foreach (['Pilão', 'Melitta'] as $marca) {
+            $this->compra('Café', 'Atacadão', 1000, ['marca' => $marca]);
+            $this->compra('Café', 'Bairro', 1100, ['marca' => $marca]);
+        }
+        $this->compra('Arroz', 'Atacadão', 1000, ['marca' => null]);
+        $this->compra('Arroz', 'Bairro', 1100, ['marca' => null]);
+
+        $produtos = $this->getJson('/api/precos/diferencas')->json('produtos');
+
+        $this->assertSame(
+            [['Arroz', null], ['Café', 'Melitta'], ['Café', 'Pilão']],
+            array_map(fn ($p) => [$p['produto']['nome'], $p['produto']['marca']], $produtos),
+        );
+    }
+
+    public function test_diferencas_desempata_mercados_de_mesma_mediana_pelo_nome(): void
+    {
+        $this->compra('Café', 'B', 1000);
+        $this->compra('Café', 'A', 1000);
+
+        $item = $this->getJson('/api/precos/diferencas')->json('produtos.0');
+
+        $this->assertSame(['A', 'B'], [$item['menor']['mercado']['nome'], $item['maior']['mercado']['nome']]);
+        $this->assertEquals(0, $item['diferenca_percentual']);
+    }
+
+    public function test_diferencas_vazio_sem_produto_em_dois_mercados_e_nao_cria_nada(): void
+    {
+        $this->compra('Café', 'Atacadão', 1000);
+        $antes = $this->contagens();
+
+        $response = $this->getJson('/api/precos/diferencas');
+
+        $this->assertContract($response, 'diferencas.index');
+        $this->assertSame([], $response->json('produtos'));
+        $this->assertSame($antes, $this->contagens());
+    }
+
     public function test_paginas_renderizam_o_componente_com_as_props_do_contrato(): void
     {
         foreach ($this->contract('paginas') as $rota => $pagina) {

@@ -9,6 +9,7 @@ use App\Models\Produto;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -34,17 +35,8 @@ class PrecosController extends Controller
             ->orderByDesc('data')->orderByDesc('id')->get()
             ->makeHidden(['produto_id', 'mercado_id'])->append('preco_base_centavos');
 
-        $mediana = fn ($lista) => round($lista->pluck('preco_base_centavos')->median(), 2);
         $ultima = $compras->first();
-
-        $mercados = $compras->groupBy('mercado_id')
-            ->map(fn ($lista) => [
-                'mercado' => $lista->first()->mercado,
-                'mediana_centavos' => $mediana($lista),
-                'contagem' => $lista->count(),
-            ])
-            ->sort(fn ($a, $b) => [$a['mediana_centavos'], $a['mercado']->nome] <=> [$b['mediana_centavos'], $b['mercado']->nome])
-            ->values();
+        $mercados = $this->medianasPorMercado($compras);
         $menor = $mercados->first()['mediana_centavos'];
         $mercados = $mercados->map(fn ($m) => [
             ...$m,
@@ -56,7 +48,7 @@ class PrecosController extends Controller
             'compras' => $compras,
             'mercados' => $mercados,
             'resumo' => [
-                'mediana_centavos' => $mediana($compras),
+                'mediana_centavos' => $this->mediana($compras),
                 'minimo_centavos' => $compras->min('preco_base_centavos'),
                 'maximo_centavos' => $compras->max('preco_base_centavos'),
                 'contagem' => $compras->count(),
@@ -72,6 +64,30 @@ class PrecosController extends Controller
                 'em_promocao' => $compras->where('promocao')->count(),
             ],
         ]);
+    }
+
+    public function diferencas(): JsonResponse
+    {
+        $itens = Produto::with('compras.mercado')->get()->map(function ($produto) {
+            $mercados = $this->medianasPorMercado($produto->compras);
+            if ($mercados->count() < 2) {
+                return null;
+            }
+            [$menor, $maior] = [$mercados->first(), $mercados->last()];
+
+            return [
+                'produto' => $produto->only(['id', 'nome', 'marca', 'unidade_base']),
+                'menor' => Arr::only($menor, ['mercado', 'mediana_centavos']),
+                'maior' => Arr::only($maior, ['mercado', 'mediana_centavos']),
+                'diferenca_percentual' => round(($maior['mediana_centavos'] - $menor['mediana_centavos']) / $menor['mediana_centavos'] * 100, 1),
+            ];
+        })->filter()->sortBy([
+            ['diferenca_percentual', 'desc'],
+            ['produto.nome', 'asc'],
+            ['produto.marca', 'asc'],
+        ])->values();
+
+        return response()->json(['produtos' => $itens]);
     }
 
     public function registrar(Request $request): JsonResponse
@@ -141,6 +157,24 @@ class PrecosController extends Controller
                 'marca' => $compra->produto->marca,
             ]),
         ]);
+    }
+
+    private function mediana(Collection $compras): float
+    {
+        return round($compras->pluck('preco_base_centavos')->median(), 2);
+    }
+
+    /** Uma linha por mercado, da menor para a maior mediana (empate: nome do mercado). */
+    private function medianasPorMercado(Collection $compras): Collection
+    {
+        return $compras->groupBy('mercado_id')
+            ->map(fn ($lista) => [
+                'mercado' => $lista->first()->mercado,
+                'mediana_centavos' => $this->mediana($lista),
+                'contagem' => $lista->count(),
+            ])
+            ->sort(fn ($a, $b) => [$a['mediana_centavos'], $a['mercado']->nome] <=> [$b['mediana_centavos'], $b['mercado']->nome])
+            ->values();
     }
 
     private function buscarMercado(string $nome): ?Mercado
