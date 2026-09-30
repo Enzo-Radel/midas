@@ -106,4 +106,49 @@ describe('Precos/Produto', () => {
             expect(texto(wrapper, '.periodo')).not.toContain(' a ');
         });
     });
+
+    describe('por mercado', () => {
+        const montar = async (mercados) => {
+            const resposta = contract('produtos.show').response;
+            resposta.mercados = mercados;
+            axios.get.mockResolvedValue({ data: resposta });
+            const wrapper = mount(Produto, { props: { produtoId: 1 } });
+            await flushPromises();
+
+            return wrapper;
+        };
+        const linha = (nome, mediana, contagem, diferenca) => ({ mercado: { id: 1, nome }, mediana_centavos: mediana, contagem, diferenca_percentual: diferenca });
+        const linhas = (wrapper) => wrapper.findAll('.por-mercado .linha').map((l) => l.text().replace(/\s+/g, ' '));
+
+        it('mostra nome, mediana na unidade base, contagem e diferença na ordem recebida, entre o resumo e o histórico', async () => {
+            const wrapper = await montar([linha('Atacadão', 3720, 9, 0), linha('Mercado do bairro', 3910, 1, 5.1), linha('Loja', 4000, 2, 10)]);
+
+            const texto = linhas(wrapper);
+            expect(texto).toHaveLength(3);
+            expect(texto[0]).toContain('Atacadão');
+            expect(texto[0]).toContain('R$ 37,20/kg');
+            expect(texto[0]).toContain('9 compras');
+            expect(texto[0]).toContain('melhor');
+            expect(texto[1]).toContain('Mercado do bairro');
+            expect(texto[1]).toContain('R$ 39,10/kg');
+            expect(texto[1]).toContain('1 compra');
+            expect(texto[1]).not.toContain('1 compras');
+            expect(texto[1]).toContain('+5,1%');
+            expect(texto[2]).toContain('+10,0%');
+
+            const secao = wrapper.find('.por-mercado').element;
+            expect(wrapper.find('.resumo').element.compareDocumentPosition(secao)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+            expect(secao.compareDocumentPosition(wrapper.find('ul').element)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+        });
+
+        it('com um só mercado não mostra diferença nem "melhor"', async () => {
+            const wrapper = await montar([linha('Atacadão', 3720, 9, null)]);
+
+            const texto = linhas(wrapper);
+            expect(texto).toHaveLength(1);
+            expect(texto[0]).toContain('R$ 37,20/kg');
+            expect(texto[0]).not.toContain('melhor');
+            expect(texto[0]).not.toContain('%');
+        });
+    });
 });

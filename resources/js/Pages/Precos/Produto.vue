@@ -13,17 +13,22 @@ const props = defineProps({
 const produto = ref(null);
 const compras = ref([]);
 const resumo = ref(null);
+const mercados = ref([]);
 
 axios.get(`/api/precos/produtos/${props.produtoId}`).then(({ data }) => {
     produto.value = data.produto;
     compras.value = data.compras;
     resumo.value = data.resumo;
+    mercados.value = data.mercados;
 });
 
 const data = (iso) => iso.split('-').reverse().join('/');
 const quantidade = (c) =>
     `${c.quantidade.toLocaleString('pt-BR')} ${c.unidade === 'duzia' ? 'dúzia' : c.unidade}${c.unidades_por_pacote ? ` (${c.unidades_por_pacote} un)` : ''}`;
 const reais = (centavos) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(centavos / 100);
+const contagem = (n) => `${n} ${n === 1 ? 'compra' : 'compras'}`;
+const diferenca = (percentual) =>
+    percentual === null ? '' : percentual === 0 ? 'melhor' : `+${percentual.toLocaleString('pt-BR', { minimumFractionDigits: 1 })}%`;
 const porBase = (centavos) => `${reais(centavos)}/${produto.value.unidade_base}`;
 </script>
 
@@ -41,10 +46,20 @@ const porBase = (centavos) => `${reais(centavos)}/${produto.value.unidade_base}`
                     Última compra: {{ porBase(resumo.ultima.preco_base_centavos) }} em {{ resumo.ultima.mercado.nome }},
                     {{ data(resumo.ultima.data) }}
                 </p>
-                <p class="contagem">{{ resumo.contagem }} {{ resumo.contagem === 1 ? 'compra' : 'compras' }}</p>
+                <p class="contagem">{{ contagem(resumo.contagem) }}</p>
                 <p class="periodo">
                     Período: {{ data(resumo.periodo.inicio) }}<template v-if="resumo.periodo.inicio !== resumo.periodo.fim"> a {{ data(resumo.periodo.fim) }}</template>
                 </p>
+            </section>
+
+            <section class="por-mercado">
+                <h2 class="secao-titulo">Por mercado</h2>
+                <div v-for="m in mercados" :key="m.mercado.id" class="linha">
+                    <span class="nome">{{ m.mercado.nome }}</span>
+                    <span class="mediana-mercado">{{ porBase(m.mediana_centavos) }}</span>
+                    <span class="detalhe">{{ contagem(m.contagem) }}</span>
+                    <span class="detalhe diferenca">{{ diferenca(m.diferenca_percentual) }}</span>
+                </div>
             </section>
 
             <ul class="list">
@@ -91,6 +106,45 @@ const porBase = (centavos) => `${reais(centavos)}/${produto.value.unidade_base}`
     font-size: 2.25rem;
     font-weight: 700;
     color: #6366f1;
+}
+
+.por-mercado {
+    margin-bottom: 1.5rem;
+    padding: 1.5rem;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+}
+
+.secao-titulo {
+    margin: 0 0 0.75rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #6b7280;
+}
+
+.linha {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.125rem 1rem;
+    padding: 0.75rem 0;
+    border-top: 1px solid #e5e7eb;
+}
+
+.nome,
+.mediana-mercado {
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.mediana-mercado,
+.diferenca {
+    text-align: right;
+}
+
+.detalhe {
+    font-size: 0.875rem;
+    color: #6b7280;
 }
 
 .list {
