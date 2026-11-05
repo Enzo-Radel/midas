@@ -1,10 +1,11 @@
 <script setup>
 import { nextTick, ref } from 'vue';
-import { Link, useForm } from '@inertiajs/vue3';
+import { Link, router, useForm } from '@inertiajs/vue3';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { faArrowLeft, faPen, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faPen, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import ActionMenu from '../../Components/ActionMenu.vue';
+import ConfirmDialog from '../../Components/ConfirmDialog.vue';
 
 defineProps({
     categories: {
@@ -12,6 +13,36 @@ defineProps({
         required: true,
     },
 });
+
+// Categoria usada por gasto ou favorito não pode ser excluída por aqui.
+const inUse = (category) => category.expenses_count + category.favorites_count > 0;
+
+const plural = (count, one, many) => `${count} ${count === 1 ? one : many}`;
+
+const usage = (category) => {
+    if (!inUse(category)) return 'Não está em uso';
+
+    return [
+        category.expenses_count > 0 ? plural(category.expenses_count, 'gasto', 'gastos') : null,
+        category.favorites_count > 0 ? plural(category.favorites_count, 'favorito', 'favoritos') : null,
+    ]
+        .filter(Boolean)
+        .join(' · ');
+};
+
+const categoryToDelete = ref(null);
+const deleting = ref(false);
+
+const confirmDelete = () => {
+    router.delete(`/categorias/${categoryToDelete.value.id}`, {
+        preserveScroll: true,
+        onStart: () => (deleting.value = true),
+        onFinish: () => {
+            deleting.value = false;
+            categoryToDelete.value = null;
+        },
+    });
+};
 
 const createForm = useForm({ name: '' });
 
@@ -59,6 +90,8 @@ const saveRename = (category) => {
                 </Link>
                 <h1 class="page-title">Categorias</h1>
             </div>
+
+            <p v-if="$page.props.errors?.category" class="alert" role="alert">{{ $page.props.errors.category }}</p>
 
             <form class="card add" novalidate @submit.prevent="createCategory">
                 <label for="new-category" class="label">Nova categoria</label>
@@ -109,12 +142,25 @@ const saveRename = (category) => {
                     </form>
 
                     <template v-else>
-                        <span class="name">{{ category.name }}</span>
+                        <span class="info">
+                            <span class="name">{{ category.name }}</span>
+                            <span class="usage">{{ usage(category) }}</span>
+                        </span>
                         <ActionMenu :label="`Ações da categoria: ${category.name}`">
                             <template #default="{ close }">
                                 <button type="button" class="menu-item" role="menuitem" @click="close(); startRename(category)">
                                     <FontAwesomeIcon class="menu-icon" :icon="faPen" />
                                     <span>Renomear</span>
+                                </button>
+                                <button
+                                    v-if="!inUse(category)"
+                                    type="button"
+                                    class="menu-item menu-item-danger"
+                                    role="menuitem"
+                                    @click="close(); categoryToDelete = category"
+                                >
+                                    <FontAwesomeIcon class="menu-icon" :icon="faTrash" />
+                                    <span>Excluir</span>
                                 </button>
                             </template>
                         </ActionMenu>
@@ -122,6 +168,16 @@ const saveRename = (category) => {
                 </li>
             </ul>
         </div>
+
+        <ConfirmDialog
+            :open="categoryToDelete !== null"
+            title="Excluir esta categoria?"
+            :message="categoryToDelete ? `A categoria ${categoryToDelete.name} não está em uso e será removida.` : ''"
+            confirm-label="Excluir"
+            :processing="deleting"
+            @confirm="confirmDelete"
+            @cancel="categoryToDelete = null"
+        />
     </AppLayout>
 </template>
 
@@ -177,6 +233,16 @@ const saveRename = (category) => {
     background: white;
     border: 1px solid #e5e7eb;
     border-radius: 12px;
+}
+
+.alert {
+    margin: 0 0 1rem;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    color: #dc2626;
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
 }
 
 .add {
@@ -320,10 +386,22 @@ const saveRename = (category) => {
     border-bottom: none;
 }
 
+.info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+}
+
 .name {
     font-weight: 500;
     color: #1f2937;
     overflow-wrap: anywhere;
+}
+
+.usage {
+    font-size: 0.875rem;
+    color: #6b7280;
 }
 
 .rename {

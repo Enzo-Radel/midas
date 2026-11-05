@@ -74,3 +74,9 @@ Itens levantados pelo revisor automático que não foram corrigidos na etapa e f
 - [ ] **Nomes que só diferem por espaços internos ou normalização Unicode** — "Casa  Nova" e "Casa Nova" contam como diferentes. A análise não pede; só uma observação.
 - [ ] **Menu de três pontos com um único item** — custa dois toques por ação até as etapas 12 a 14 acrescentarem Excluir e Desativar; reavaliar se a ordem das etapas mudar.
 - [ ] **Tela de categorias mais uma cópia de CSS de botão/campo** — ver o ponto de CSS repetido (etapas 01 e 09); a tela de tags (etapa 15) será a próxima.
+
+## Etapa 12 — Excluir categoria sem gastos
+- [ ] **Categoria só de favoritos conta como "em uso"** — a etapa fala em "gastos ligados", mas os favoritos também bloqueiam a exclusão simples (para não ficarem sem categoria em silêncio). Confirmar se é o desejado; a saída é desativar ou trocar (etapas 13 e 14).
+- [ ] **Travamento só garantido no MySQL** — a transação com `lockForUpdate` protege contra um gasto usar a categoria durante a exclusão no MySQL; no SQLite dos testes o travamento não tem efeito e não há teste desse cenário. Alternativa mais robusta: `restrictOnDelete` nas duas chaves (ver o ponto da etapa 05, decidir na etapa 14).
+- [ ] **Aviso de erro no topo da tela de categorias** — com uma lista longa e a rolagem preservada, o aviso pode ficar fora da vista; só aparece com a tela desatualizada.
+- [ ] **"Cancelar não muda nada" e "Excluir oculto" sem teste automatizado** — verificados só no navegador (sem teste de componente no projeto).

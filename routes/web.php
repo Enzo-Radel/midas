@@ -20,6 +20,7 @@ Route::middleware(UseDefaultUser::class)->group(function () {
     Route::get('/categorias', [CategoryController::class, 'index'])->name('categories.index');
     Route::post('/categorias', [CategoryController::class, 'store'])->name('categories.store');
     Route::put('/categorias/{category}', [CategoryController::class, 'update'])->name('categories.update');
+    Route::delete('/categorias/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
     Route::get('/favoritos', [FavoriteController::class, 'index'])->name('favorites.index');
     Route::get('/favoritos/{favorite}/editar', [FavoriteController::class, 'edit'])->name('favorites.edit');
     Route::put('/favoritos/{favorite}', [FavoriteController::class, 'update'])->name('favorites.update');
