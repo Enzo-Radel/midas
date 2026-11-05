@@ -54,4 +54,22 @@ class User extends Authenticatable
     {
         return $this->hasMany(Expense::class);
     }
+
+    /**
+     * Get the categories for the user.
+     */
+    public function categories(): HasMany
+    {
+        return $this->hasMany(Category::class);
+    }
+
+    /**
+     * Cria as categorias iniciais definidas em config/midas.php.
+     */
+    public function createDefaultCategories(): void
+    {
+        foreach (config('midas.default_categories') as $name) {
+            $this->categories()->create(['name' => $name]);
+        }
+    }
 }

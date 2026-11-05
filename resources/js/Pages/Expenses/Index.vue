@@ -56,8 +56,11 @@ const confirmDelete = () => {
 
                     <ul class="list">
                         <li v-for="expense in day.expenses" :key="expense.id" class="item">
-                            <span class="item-description" :class="{ 'item-description-empty': !expense.description }">
-                                {{ expense.description || 'Sem descrição' }}
+                            <span class="item-main">
+                                <span class="item-description" :class="{ 'item-description-empty': !expense.description }">
+                                    {{ expense.description || 'Sem descrição' }}
+                                </span>
+                                <span v-if="expense.category" class="item-category">{{ expense.category }}</span>
                             </span>
                             <span class="item-amount">{{ formatCents(expense.amount) }}</span>
                             <Link
@@ -219,9 +222,25 @@ const confirmDelete = () => {
     border-bottom: none;
 }
 
-.item-description {
+.item-main {
+    display: flex;
     flex: 1;
+    flex-direction: column;
+    gap: 0.25rem;
     min-width: 0;
+}
+
+.item-category {
+    align-self: flex-start;
+    padding: 0.125rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #4f46e5;
+    background-color: #eef2ff;
+    border-radius: 8px;
+}
+
+.item-description {
     font-weight: 500;
     color: #1f2937;
     overflow: hidden;

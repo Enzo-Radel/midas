@@ -1,13 +1,20 @@
 <script setup>
 import AppLayout from '../../Layouts/AppLayout.vue';
 import ExpenseForm from '../../Components/ExpenseForm.vue';
+
+defineProps({
+    categories: {
+        type: Array,
+        required: true,
+    },
+});
 </script>
 
 <template>
     <AppLayout>
         <div class="page">
             <h1 class="page-title">Novo gasto</h1>
-            <ExpenseForm />
+            <ExpenseForm :categories="categories" />
         </div>
     </AppLayout>
 </template>

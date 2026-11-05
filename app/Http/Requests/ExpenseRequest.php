@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class ExpenseRequest extends FormRequest
 {
@@ -15,6 +16,11 @@ class ExpenseRequest extends FormRequest
             'amount' => ['required', 'numeric', 'decimal:0,2', 'gt:0', 'max:99999999.99'],
             'date' => ['required', 'date_format:Y-m-d'],
             'description' => ['nullable', 'string', 'max:255'],
+            'category_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('categories', 'id')->where('user_id', $this->user()->id),
+            ],
         ];
     }
 
@@ -31,6 +37,8 @@ class ExpenseRequest extends FormRequest
             'amount.max' => 'O valor é grande demais.',
             'date.required' => 'Informe a data.',
             'date.date_format' => 'Informe uma data válida.',
+            'category_id.integer' => 'Escolha uma categoria válida.',
+            'category_id.exists' => 'Escolha uma categoria válida.',
             'description.max' => 'A descrição pode ter no máximo 255 caracteres.',
         ];
     }

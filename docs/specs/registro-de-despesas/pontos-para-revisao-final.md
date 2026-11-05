@@ -23,3 +23,10 @@ Itens levantados pelo revisor automático que não foram corrigidos na etapa e f
 - [ ] **Falha na exclusão sem aviso** — se a requisição falhar (rede, sessão expirada), o diálogo fecha e o gasto continua na lista, sem mensagem de erro. Decidir se vale mostrar um aviso.
 - [ ] **Descrições truncadas no celular** — com valor e dois botões de 44px na mesma linha, descrições ficam bem curtas em tela estreita (ex.: "Sem descri..."). Decidir se as ações viram um menu, ou vão para uma segunda linha. Vale olhar no seu celular; o problema cresce se entrarem categoria, tags e "repetir"/"favoritar" nas próximas etapas.
 - [ ] **Diálogo de confirmação sem teste automatizado** — confirmação e cancelamento verificados só no navegador (sem teste de componente no projeto).
+
+## Etapa 05 — Categoria no gasto
+- [ ] **Categoria apagada sem destino** — a chave de `expenses.category_id` está como `nullOnDelete`: se uma categoria for apagada direto no banco, os gastos ficam sem categoria em silêncio. A análise diz que categoria em uso nunca é apagada sem destino; as etapas 12 a 14 garantem isso na tela. Decidir se vale trocar por `restrictOnDelete` (mais fiel à regra) na etapa 14.
+- [ ] **Sem índice único em nome de categoria** — duas primeiras visitas simultâneas podem duplicar as categorias iniciais, e nada impede nomes repetidos no banco (a regra é só na tela, etapa 11). Decidir se vale um índice único `(user_id, nome)`.
+- [ ] **Migração de preenchimento sem teste automatizado** — verificada manualmente em banco com dois usuários; a suíte roda as migrações sem usuários.
+- [ ] **Teste da lista inicial compara com texto fixo** — quando a lista provisória mudar, o teste muda junto. Decidir se vale comparar com `config('midas.default_categories')`.
+- [ ] **Truncamento no celular** — a etiqueta de categoria abaixo da descrição aumenta a altura da linha; ver junto com o ponto da etapa 04.

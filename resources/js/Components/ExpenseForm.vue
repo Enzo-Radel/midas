@@ -10,12 +10,17 @@ const props = defineProps({
         type: Object,
         default: null,
     },
+    categories: {
+        type: Array,
+        default: () => [],
+    },
 });
 
 const form = useForm({
     amount: props.expense ? toAmountInput(props.expense.amount) : '',
     date: props.expense?.date ?? todayIso(),
     description: props.expense?.description ?? '',
+    category_id: props.expense?.category_id ?? '',
 });
 
 const amountInput = ref(null);
@@ -83,6 +88,22 @@ const submit = () => {
                 :class="{ 'input-error': form.errors.description }"
             />
             <p v-if="form.errors.description" class="error">{{ form.errors.description }}</p>
+        </div>
+
+        <div class="field">
+            <label for="category" class="label">Categoria <span class="optional">(opcional)</span></label>
+            <select
+                id="category"
+                v-model="form.category_id"
+                class="input"
+                :class="{ 'input-error': form.errors.category_id }"
+            >
+                <option value="">Sem categoria</option>
+                <option v-for="category in categories" :key="category.id" :value="category.id">
+                    {{ category.name }}
+                </option>
+            </select>
+            <p v-if="form.errors.category_id" class="error">{{ form.errors.category_id }}</p>
         </div>
 
         <div class="actions">

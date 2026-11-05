@@ -6,6 +6,7 @@ use App\Http\Requests\ExpenseRequest;
 use App\Models\Expense;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -15,6 +16,7 @@ class ExpenseController extends Controller
     public function index(Request $request): Response
     {
         $days = $request->user()->expenses()
+            ->with('category')
             ->orderByDesc('date')
             ->orderByDesc('id')
             ->get()
@@ -26,6 +28,7 @@ class ExpenseController extends Controller
                     'id' => $expense->id,
                     'amount' => $expense->amount,
                     'description' => $expense->description,
+                    'category' => $expense->category?->name,
                 ])->values(),
             ])
             ->values();
@@ -33,9 +36,11 @@ class ExpenseController extends Controller
         return Inertia::render('Expenses/Index', ['days' => $days]);
     }
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
-        return Inertia::render('Expenses/Create');
+        return Inertia::render('Expenses/Create', [
+            'categories' => $this->categoriesFor($request),
+        ]);
     }
 
     public function store(ExpenseRequest $request): RedirectResponse
@@ -44,6 +49,7 @@ class ExpenseController extends Controller
             'amount' => $request->amountInCents(),
             'date' => $request->validated('date'),
             'description' => $request->validated('description'),
+            'category_id' => $request->validated('category_id'),
         ]);
 
         return redirect()->route('expenses.index');
@@ -59,7 +65,9 @@ class ExpenseController extends Controller
                 'amount' => number_format($expense->amount / 100, 2, '.', ''),
                 'date' => $expense->date->toDateString(),
                 'description' => $expense->description,
+                'category_id' => $expense->category_id,
             ],
+            'categories' => $this->categoriesFor($request),
         ]);
     }
 
@@ -71,6 +79,7 @@ class ExpenseController extends Controller
             'amount' => $request->amountInCents(),
             'date' => $request->validated('date'),
             'description' => $request->validated('description'),
+            'category_id' => $request->validated('category_id'),
         ]);
 
         return redirect()->route('expenses.index');
@@ -83,6 +92,11 @@ class ExpenseController extends Controller
         $expense->delete();
 
         return redirect()->route('expenses.index');
+    }
+
+    private function categoriesFor(Request $request): EloquentCollection
+    {
+        return $request->user()->categories()->orderBy('id')->get(['id', 'name']);
     }
 
     private function authorizeOwner(Request $request, Expense $expense): void
