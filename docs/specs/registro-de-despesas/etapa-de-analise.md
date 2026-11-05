@@ -1,6 +1,6 @@
 # Registro rápido de despesas
 
-**Tipo:** funcionalidade · **Status:** pronta · **Atualizada em:** 2026-11-04
+**Tipo:** funcionalidade · **Status:** em andamento · **Atualizada em:** 2026-11-05
 
 ## Problema
 Quem controla os próprios gastos registra a maioria deles pelo celular, logo após pagar, e o restante no fim do dia ou numa revisão no fim de semana. Boa parte dos gastos se repete (o mesmo almoço, o mesmo refrigerante da tarde), mas os sistemas existentes obrigam a redigitar descrição, valor, categoria e tags a cada vez. Esse esforço repetido faz a pessoa pular registros, depois parar de registrar, e perder a clareza sobre onde poderia reduzir gastos.
@@ -61,4 +61,5 @@ Um cadastro curto, em que só o valor é obrigatório e a data já vem como hoje
 ## Detalhes
 - [fluxo-do-usuario.md](fluxo-do-usuario.md) — telas e passos de cadastrar, repetir, favoritar e revisar; abra ao implementar ou testar as telas.
 - [categorias-e-tags.md](categorias-e-tags.md) — regras completas de criar, desativar e excluir categorias e tags, e o efeito em gastos e favoritos; abra ao implementar essa gestão.
+- [pontos-para-revisao-final.md](pontos-para-revisao-final.md) — pontos do revisor automático não corrigidos nas etapas; abra na revisão final.
 - [etapas/](etapas/) — etapas de desenvolvimento, uma por arquivo, em ordem; abra ao implementar.

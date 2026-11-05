@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('expenses', function (Blueprint $table) {
             $table->id();
-            $table->integer('amount');
-            $table->string('description');
+            $table->unsignedBigInteger('amount'); // em centavos
+            $table->string('description')->nullable();
             $table->date('date');
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->timestamps();

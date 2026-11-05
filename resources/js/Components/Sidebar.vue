@@ -28,7 +28,7 @@ const toggleSidebar = () => {
 
 const menuItems = [
     { label: 'Dashboard', icon: faGaugeHigh, href: '#' },
-    { label: 'Expenses', icon: faSackDollar, href: '#' },
+    { label: 'Expenses', icon: faSackDollar, href: '/despesas' },
     { label: 'Reports', icon: faChartLine, href: '#' },
     { label: 'Settings', icon: faGear, href: '#' },
 ];
