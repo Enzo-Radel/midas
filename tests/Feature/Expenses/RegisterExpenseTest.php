@@ -100,13 +100,13 @@ class RegisterExpenseTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Expenses/Index')
-                ->has('expenses', 4)
-                ->where('expenses.0.description', 'recente e criado depois')
-                ->where('expenses.1.description', 'recente')
-                ->where('expenses.2.description', 'meio')
-                ->where('expenses.3.description', 'antigo')
-                ->where('expenses.3.amount', 100)
-                ->where('expenses.3.date', '2026-11-01')
+                ->has('days', 3)
+                ->where('days.0.expenses.0.description', 'recente e criado depois')
+                ->where('days.0.expenses.1.description', 'recente')
+                ->where('days.1.expenses.0.description', 'meio')
+                ->where('days.2.expenses.0.description', 'antigo')
+                ->where('days.2.expenses.0.amount', 100)
+                ->where('days.2.date', '2026-11-01')
             );
     }
 
@@ -116,6 +116,6 @@ class RegisterExpenseTest extends TestCase
         Expense::create(['amount' => 999, 'date' => '2026-11-05', 'user_id' => User::factory()->create()->id]);
 
         $this->get(route('expenses.index'))
-            ->assertInertia(fn (Assert $page) => $page->has('expenses', 1)->where('expenses.0.amount', 200));
+            ->assertInertia(fn (Assert $page) => $page->has('days', 1)->has('days.0.expenses', 1)->where('days.0.expenses.0.amount', 200));
     }
 }

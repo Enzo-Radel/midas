@@ -6,9 +6,25 @@ export function todayIso() {
     return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
 
-const shortDate = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
+const dayLabel = new Intl.DateTimeFormat('pt-BR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
 
-/** Formata AAAA-MM-DD como DD/MM/AAAA. */
-export function formatDate(iso) {
-    return shortDate.format(new Date(`${iso}T00:00:00Z`));
+/** Soma dias a uma data AAAA-MM-DD. */
+function addDays(iso, days) {
+    const date = new Date(`${iso}T00:00:00Z`);
+    date.setUTCDate(date.getUTCDate() + days);
+
+    return date.toISOString().slice(0, 10);
+}
+
+/**
+ * Rótulo do separador de um dia: "Hoje", "Ontem" ou, por exemplo, "seg, 2 nov".
+ * `today` pode ser informado para facilitar testes.
+ */
+export function formatDayLabel(iso, today = todayIso()) {
+    if (iso === today) return 'Hoje';
+    if (iso === addDays(today, -1)) return 'Ontem';
+
+    const label = dayLabel.format(new Date(`${iso}T00:00:00Z`)).replace(/\./g, '').replace(/ de /g, ' ');
+
+    return label.charAt(0).toUpperCase() + label.slice(1);
 }

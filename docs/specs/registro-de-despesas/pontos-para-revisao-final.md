@@ -9,3 +9,8 @@ Itens levantados pelo revisor automático que não foram corrigidos na etapa e f
 - [ ] **Testes em SQLite em memória** — pode esconder diferenças em relação ao MySQL usado no aplicativo. Decidir se vale rodar a suíte também contra MySQL (por exemplo, no Sail ou na CI).
 - [ ] **Usuário padrão criado em qualquer requisição** — `UseDefaultUser` cria o usuário na primeira visita, até em GET. É provisório: trocar por autenticação quando o login existir.
 - [ ] **Telas sem testes automatizados de componente** — foco no valor, data de hoje, "Sem descrição" e o conforto no celular só têm verificação manual (o projeto não tem Vitest nem Jest). Decidir se vale montar essa estrutura.
+
+## Etapa 02 — Lista no estilo extrato
+- [ ] **Rótulo do dia sem o ano** — gastos de anos diferentes aparecem como "Sex, 7 nov" sem distinção. Decidir se o ano aparece quando for diferente do atual.
+- [ ] **Parâmetro `today` de `formatDayLabel`** — existe para facilitar testes, mas nenhum teste o usa (o projeto não tem Vitest/Jest). Manter ou remover.
+- [ ] **Peso visual do separador** — título do dia e total usam o mesmo cinza e tamanho; olhar no celular se o total precisa de mais destaque.

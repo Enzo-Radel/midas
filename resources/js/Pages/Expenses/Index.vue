@@ -4,10 +4,10 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { faPlus } from '@fortawesome/free-solid-svg-icons';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import { formatCents } from '../../utils/money.js';
-import { formatDate } from '../../utils/date.js';
+import { formatDayLabel } from '../../utils/date.js';
 
 defineProps({
-    expenses: {
+    days: {
         type: Array,
         required: true,
     },
@@ -25,23 +25,29 @@ defineProps({
                 </Link>
             </div>
 
-            <div v-if="expenses.length === 0" class="empty">
+            <div v-if="days.length === 0" class="empty">
                 <p class="empty-title">Nenhum gasto registrado ainda</p>
                 <p class="empty-text">Registre seu primeiro gasto para começar a acompanhar para onde vai o seu dinheiro.</p>
                 <Link href="/despesas/nova" class="button button-primary">Registrar primeiro gasto</Link>
             </div>
 
-            <ul v-else class="list">
-                <li v-for="expense in expenses" :key="expense.id" class="item">
-                    <div class="item-main">
-                        <span class="item-description" :class="{ 'item-description-empty': !expense.description }">
-                            {{ expense.description || 'Sem descrição' }}
-                        </span>
-                        <span class="item-date">{{ formatDate(expense.date) }}</span>
-                    </div>
-                    <span class="item-amount">{{ formatCents(expense.amount) }}</span>
-                </li>
-            </ul>
+            <template v-else>
+                <section v-for="day in days" :key="day.date" class="day">
+                    <header class="day-header">
+                        <h2 class="day-title">{{ formatDayLabel(day.date) }}</h2>
+                        <span class="day-total">{{ formatCents(day.total) }}</span>
+                    </header>
+
+                    <ul class="list">
+                        <li v-for="expense in day.expenses" :key="expense.id" class="item">
+                            <span class="item-description" :class="{ 'item-description-empty': !expense.description }">
+                                {{ expense.description || 'Sem descrição' }}
+                            </span>
+                            <span class="item-amount">{{ formatCents(expense.amount) }}</span>
+                        </li>
+                    </ul>
+                </section>
+            </template>
         </div>
     </AppLayout>
 </template>
@@ -121,6 +127,32 @@ defineProps({
     line-height: 1.6;
 }
 
+.day {
+    margin-bottom: 1.5rem;
+}
+
+.day-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0 0.25rem 0.5rem;
+}
+
+.day-title {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #6b7280;
+}
+
+.day-total {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #6b7280;
+    white-space: nowrap;
+}
+
 .list {
     list-style: none;
     margin: 0;
@@ -144,13 +176,6 @@ defineProps({
     border-bottom: none;
 }
 
-.item-main {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    min-width: 0;
-}
-
 .item-description {
     font-weight: 500;
     color: #1f2937;
@@ -162,11 +187,6 @@ defineProps({
 .item-description-empty {
     color: #6b7280;
     font-style: italic;
-}
-
-.item-date {
-    font-size: 0.875rem;
-    color: #6b7280;
 }
 
 .item-amount {
