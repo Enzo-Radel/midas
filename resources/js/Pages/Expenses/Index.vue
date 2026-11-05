@@ -36,10 +36,16 @@ const confirmDelete = () => {
         <div class="page">
             <div class="page-header">
                 <h1 class="page-title">Despesas</h1>
-                <Link href="/despesas/nova" class="button button-primary">
-                    <FontAwesomeIcon :icon="faPlus" />
-                    <span>Novo gasto</span>
-                </Link>
+                <div class="page-actions">
+                    <Link href="/favoritos" class="button button-secondary">
+                        <FontAwesomeIcon :icon="faStar" />
+                        <span>Favoritos</span>
+                    </Link>
+                    <Link href="/despesas/nova" class="button button-primary">
+                        <FontAwesomeIcon :icon="faPlus" />
+                        <span>Novo gasto</span>
+                    </Link>
+                </div>
             </div>
 
             <div v-if="days.length === 0" class="empty">
@@ -97,6 +103,7 @@ const confirmDelete = () => {
 
 .page-header {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
@@ -121,6 +128,33 @@ const confirmDelete = () => {
     text-decoration: none;
     cursor: pointer;
     transition: all 0.2s ease;
+}
+
+.page-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.button-secondary {
+    background-color: white;
+    color: #374151;
+    border: 1px solid #d1d5db;
+}
+
+.button-secondary:hover {
+    background-color: #f3f4f6;
+    border-color: #9ca3af;
+    transform: translateY(-2px);
+}
+
+.button-secondary:active {
+    transform: scale(0.98);
+}
+
+.button-secondary:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
 }
 
 .button-primary {

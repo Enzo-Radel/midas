@@ -6,9 +6,9 @@ use App\Http\Requests\ExpenseRequest;
 use App\Models\Expense;
 use App\Models\Tag;
 use App\Services\ExpenseFavorites;
+use App\Support\ExpenseFormData;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -45,8 +45,8 @@ class ExpenseController extends Controller
     public function create(Request $request): Response
     {
         return Inertia::render('Expenses/Create', [
-            'categories' => $this->categoriesFor($request),
-            'tags' => $this->tagNamesFor($request),
+            'categories' => ExpenseFormData::categories($request->user()),
+            'tags' => ExpenseFormData::tagNames($request->user()),
         ]);
     }
 
@@ -59,14 +59,10 @@ class ExpenseController extends Controller
         $this->authorizeOwner($request, $expense);
 
         return Inertia::render('Expenses/Create', [
-            'prefill' => [
-                'amount' => number_format($expense->amount / 100, 2, '.', ''),
-                'description' => $expense->description,
-                'category_id' => $expense->category_id,
-                'tags' => $expense->tags()->orderBy('name')->pluck('name'),
-            ],
-            'categories' => $this->categoriesFor($request),
-            'tags' => $this->tagNamesFor($request),
+            'source' => 'expense',
+            'prefill' => ExpenseFormData::prefill($expense),
+            'categories' => ExpenseFormData::categories($request->user()),
+            'tags' => ExpenseFormData::tagNames($request->user()),
         ]);
     }
 
@@ -94,15 +90,15 @@ class ExpenseController extends Controller
         return Inertia::render('Expenses/Edit', [
             'expense' => [
                 'id' => $expense->id,
-                'amount' => number_format($expense->amount / 100, 2, '.', ''),
+                'amount' => ExpenseFormData::amount($expense->amount),
                 'date' => $expense->date->toDateString(),
                 'description' => $expense->description,
                 'category_id' => $expense->category_id,
                 'tags' => $expense->tags()->orderBy('name')->pluck('name'),
                 'favorited' => $expense->favorite()->exists(),
             ],
-            'categories' => $this->categoriesFor($request),
-            'tags' => $this->tagNamesFor($request),
+            'categories' => ExpenseFormData::categories($request->user()),
+            'tags' => ExpenseFormData::tagNames($request->user()),
         ]);
     }
 
@@ -166,14 +162,6 @@ class ExpenseController extends Controller
     }
 
     /**
-     * Nomes das tags do usuário, para sugerir na tela.
-     */
-    private function tagNamesFor(Request $request): Collection
-    {
-        return $request->user()->tags()->orderBy('name')->pluck('name');
-    }
-
-    /**
      * Atribui ao gasto as tags informadas por nome. Reaproveita a tag que já existe
      * (sem diferenciar maiúsculas e espaços nas pontas) e cria as que ainda não existem.
      */
@@ -189,11 +177,6 @@ class ExpenseController extends Controller
             ->map(fn (string $name) => ($existing->get(mb_strtolower($name)) ?? $user->tags()->create(['name' => $name]))->id);
 
         $expense->tags()->sync($ids->all());
-    }
-
-    private function categoriesFor(Request $request): EloquentCollection
-    {
-        return $request->user()->categories()->orderBy('id')->get(['id', 'name']);
     }
 
     private function authorizeOwner(Request $request, Expense $expense): void

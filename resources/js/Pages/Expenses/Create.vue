@@ -1,11 +1,17 @@
 <script setup>
+import { computed } from 'vue';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import ExpenseForm from '../../Components/ExpenseForm.vue';
 
-defineProps({
+const props = defineProps({
     /** Dados de um gasto a repetir; ausente no cadastro em branco. */
     prefill: {
         type: Object,
+        default: null,
+    },
+    /** De onde vem o preenchimento: 'expense' (repetir um gasto) ou 'favorite' (usar um favorito). */
+    source: {
+        type: String,
         default: null,
     },
     categories: {
@@ -17,13 +23,22 @@ defineProps({
         required: true,
     },
 });
+
+const title = computed(() => {
+    if (props.source === 'favorite') return 'Usar favorito';
+
+    return props.prefill ? 'Repetir gasto' : 'Novo gasto';
+});
+
+// Cancelar volta para a tela de onde a pessoa veio.
+const cancelHref = computed(() => (props.source === 'favorite' ? '/favoritos' : '/despesas'));
 </script>
 
 <template>
     <AppLayout>
         <div class="page">
-            <h1 class="page-title">{{ prefill ? 'Repetir gasto' : 'Novo gasto' }}</h1>
-            <ExpenseForm :prefill="prefill" :categories="categories" :tags="tags" />
+            <h1 class="page-title">{{ title }}</h1>
+            <ExpenseForm :prefill="prefill" :categories="categories" :tags="tags" :cancel-href="cancelHref" />
         </div>
     </AppLayout>
 </template>

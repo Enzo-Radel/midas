@@ -42,7 +42,7 @@ Itens levantados pelo revisor automático que não foram corrigidos na etapa e f
 ## Etapa 07 — Repetir um gasto
 - [ ] **Menu de ações sempre abre para baixo** — no último gasto de uma lista longa, ou perto do fim da tela, o menu pode exigir rolagem. Hoje cabe (menu de 3 itens); fica mais apertado com "Favoritar". Decidir se vale abrir para cima quando faltar espaço.
 - [ ] **Foco após excluir** — depois de confirmar a exclusão o foco cai no corpo da página (o botão some com o gasto). Decidir se vale levá-lo ao gasto seguinte ou ao título da lista.
-- [ ] **Montagem dos dados do gasto repetida no controller** — o valor em texto, a categoria e as tags são montados em `edit` e `repeat` (e voltarão a ser na etapa 08, favoritos). Decidir se vale extrair um método único.
+- [x] **Montagem dos dados do gasto repetida no controller** — resolvido na etapa 09 (`ExpenseFormData`).
 - [ ] **Menu e repetir sem teste automatizado** — verificados só no navegador (sem teste de componente no projeto).
 
 ## Etapa 08 — Favoritar um gasto
@@ -53,3 +53,10 @@ Itens levantados pelo revisor automático que não foram corrigidos na etapa e f
 - [ ] **Sem aviso do resultado de favoritar/desfavoritar** — o menu fecha e só a estrela muda; não há anúncio para leitor de tela nem aviso de falha da requisição (mesmo ponto da exclusão, etapa 04).
 - [ ] **Menu com 4 itens** — o ponto "menu abre sempre para baixo" (etapa 07) fica mais relevante; olhar o último gasto de uma lista longa no celular.
 - [ ] **Estrela lida por leitor de tela** — o ícone usa `title="Favorito"`; confirmar num leitor de tela, ou trocar por texto visualmente oculto.
+
+## Etapa 09 — Lista de favoritos
+- [ ] **Acesso aos favoritos só pelo cabeçalho da lista de despesas** — não há entrada no menu lateral. Decidir se vale uma entrada lá (o menu lateral hoje tem só itens de exemplo).
+- [ ] **Teste de "salvar com dados alterados não muda o favorito" é fraco** — o cadastro não conhece o favorito, então o teste mostra pouco; a garantia real está em "usar não grava nada" (que agora confere os campos do favorito). Decidir se mantém ou remove.
+- [ ] **CSS de página, botão e cartão repetido** — a tela de favoritos é mais uma cópia dos estilos de botão e título (ver o ponto da etapa 01); vale extrair componentes compartilhados antes de a tela de categorias (etapa 11) e a de tags (etapa 15) entrarem.
+- [ ] **Valor aparece duas vezes no favorito sem nome** — o título é "R$ 12,00 · Transporte" e o valor também aparece à direita. Decidir se o título deve ser só a categoria.
+- [ ] **Mensagem de lista vazia e acesso sem teste automatizado** — verificados só no navegador.

@@ -39,6 +39,7 @@ class RepeatExpenseTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Expenses/Create')
+                ->where('source', 'expense')
                 ->where('prefill.amount', '25.50')
                 ->where('prefill.description', 'Almoço')
                 ->where('prefill.category_id', $expense->category_id)

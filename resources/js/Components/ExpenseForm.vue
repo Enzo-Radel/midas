@@ -21,6 +21,11 @@ const props = defineProps({
         type: Object,
         default: null,
     },
+    /** Para onde o botão Cancelar leva. */
+    cancelHref: {
+        type: String,
+        default: '/despesas',
+    },
     /** Nomes das tags que já existem, para sugerir. */
     tags: {
         type: Array,
@@ -231,7 +236,7 @@ const submit = () => {
         </label>
 
         <div class="actions">
-            <Link href="/despesas" class="button button-secondary">Cancelar</Link>
+            <Link :href="cancelHref" class="button button-secondary">Cancelar</Link>
             <button type="submit" class="button button-primary" :disabled="form.processing">Salvar</button>
         </div>
     </form>
