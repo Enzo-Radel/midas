@@ -18,3 +18,8 @@ Itens levantados pelo revisor automático que não foram corrigidos na etapa e f
 ## Etapa 03 — Editar um gasto
 - [ ] **Testes de validação sem os limites** — o teste de edição cobre os mesmos casos do de cadastro, que não cobre "valor grande demais" nem "descrição com mais de 255 caracteres". Decidir se vale cobrir esses limites nas duas telas.
 - [ ] **Link de editar e cancelar sem teste automatizado** — verificados só no navegador (sem teste de componente no projeto).
+
+## Etapa 04 — Excluir um gasto
+- [ ] **Falha na exclusão sem aviso** — se a requisição falhar (rede, sessão expirada), o diálogo fecha e o gasto continua na lista, sem mensagem de erro. Decidir se vale mostrar um aviso.
+- [ ] **Descrições truncadas no celular** — com valor e dois botões de 44px na mesma linha, descrições ficam bem curtas em tela estreita (ex.: "Sem descri..."). Decidir se as ações viram um menu, ou vão para uma segunda linha. Vale olhar no seu celular; o problema cresce se entrarem categoria, tags e "repetir"/"favoritar" nas próximas etapas.
+- [ ] **Diálogo de confirmação sem teste automatizado** — confirmação e cancelamento verificados só no navegador (sem teste de componente no projeto).

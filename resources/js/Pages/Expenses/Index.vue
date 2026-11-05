@@ -1,8 +1,10 @@
 <script setup>
-import { Link } from '@inertiajs/vue3';
+import { ref } from 'vue';
+import { Link, router } from '@inertiajs/vue3';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { faPen, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { faPen, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import AppLayout from '../../Layouts/AppLayout.vue';
+import ConfirmDialog from '../../Components/ConfirmDialog.vue';
 import { formatCents } from '../../utils/money.js';
 import { formatDayLabel } from '../../utils/date.js';
 
@@ -12,6 +14,20 @@ defineProps({
         required: true,
     },
 });
+
+const expenseToDelete = ref(null);
+const deleting = ref(false);
+
+const confirmDelete = () => {
+    router.delete(`/despesas/${expenseToDelete.value.id}`, {
+        preserveScroll: true,
+        onStart: () => (deleting.value = true),
+        onFinish: () => {
+            deleting.value = false;
+            expenseToDelete.value = null;
+        },
+    });
+};
 </script>
 
 <template>
@@ -52,11 +68,30 @@ defineProps({
                             >
                                 <FontAwesomeIcon :icon="faPen" />
                             </Link>
+                            <button
+                                type="button"
+                                class="item-action item-action-danger"
+                                title="Excluir gasto"
+                                :aria-label="`Excluir gasto: ${expense.description || 'sem descrição'}`"
+                                @click="expenseToDelete = expense"
+                            >
+                                <FontAwesomeIcon :icon="faTrash" />
+                            </button>
                         </li>
                     </ul>
                 </section>
             </template>
         </div>
+
+        <ConfirmDialog
+            :open="expenseToDelete !== null"
+            title="Excluir este gasto?"
+            :message="expenseToDelete ? `${expenseToDelete.description || 'Gasto sem descrição'} (${formatCents(expenseToDelete.amount)}) será removido e não poderá ser recuperado.` : ''"
+            confirm-label="Excluir"
+            :processing="deleting"
+            @confirm="confirmDelete"
+            @cancel="expenseToDelete = null"
+        />
     </AppLayout>
 </template>
 
@@ -227,6 +262,21 @@ defineProps({
 .item-action:active {
     background-color: #e0e7ff;
     transform: scale(0.95);
+}
+
+.item-action-danger {
+    border: none;
+    cursor: pointer;
+    font-size: inherit;
+}
+
+.item-action-danger:hover {
+    color: #dc2626;
+    background-color: #fef2f2;
+}
+
+.item-action-danger:active {
+    background-color: #fee2e2;
 }
 
 .item-action:focus-visible {

@@ -76,6 +76,15 @@ class ExpenseController extends Controller
         return redirect()->route('expenses.index');
     }
 
+    public function destroy(Request $request, Expense $expense): RedirectResponse
+    {
+        $this->authorizeOwner($request, $expense);
+
+        $expense->delete();
+
+        return redirect()->route('expenses.index');
+    }
+
     private function authorizeOwner(Request $request, Expense $expense): void
     {
         abort_unless($expense->user_id === $request->user()->id, 404);
