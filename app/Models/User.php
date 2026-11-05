@@ -64,6 +64,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the tags for the user.
+     */
+    public function tags(): HasMany
+    {
+        return $this->hasMany(Tag::class);
+    }
+
+    /**
      * Cria as categorias iniciais definidas em config/midas.php.
      */
     public function createDefaultCategories(): void

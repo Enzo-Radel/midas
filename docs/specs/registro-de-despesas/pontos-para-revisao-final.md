@@ -30,3 +30,11 @@ Itens levantados pelo revisor automático que não foram corrigidos na etapa e f
 - [ ] **Migração de preenchimento sem teste automatizado** — verificada manualmente em banco com dois usuários; a suíte roda as migrações sem usuários.
 - [ ] **Teste da lista inicial compara com texto fixo** — quando a lista provisória mudar, o teste muda junto. Decidir se vale comparar com `config('midas.default_categories')`.
 - [ ] **Truncamento no celular** — a etiqueta de categoria abaixo da descrição aumenta a altura da linha; ver junto com o ponto da etapa 04.
+
+## Etapa 06 — Tags no gasto
+- [ ] **Tag duplicada em salvamentos simultâneos** — a regra "sem tags de mesmo nome" é feita no código (ler e depois criar), sem índice único no banco; dois salvamentos ao mesmo tempo (clique duplo, duas abas) com a mesma tag nova podem criar duas. Mesmo ponto das categorias. Decidir se vale um índice único `(user_id, nome)` (no MySQL costuma ignorar maiúsculas; no SQLite dos testes não).
+- [ ] **Limite de 20 tags só no servidor** — a 21ª tag é aceita na tela e o erro só aparece ao salvar. Decidir se a tela deve impedir ou avisar antes.
+- [ ] **Ordem das tags pode variar entre telas** — a lista ordena em PHP (ignorando maiúsculas), a edição e as sugestões ordenam no banco; com acentos a ordem pode diferir. Baixa prioridade.
+- [ ] **Erro do campo de tags sem `aria-describedby`** — como nos outros campos do formulário; decidir se vale ligar as mensagens de erro aos campos em todo o formulário.
+- [ ] **Índice em `expense_tag.tag_id`** — as etapas 14 e 15 vão renomear e excluir tags; vale conferir se a consulta por tag precisa de índice.
+- [ ] **Atualizar um gasto sem enviar `tags` remove todas as tags** — é o comportamento adotado (campo ausente = nenhuma tag); confirmar que é o desejado se um dia houver outro cliente além da tela.

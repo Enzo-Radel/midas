@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ExpenseRequest;
 use App\Models\Expense;
+use App\Models\Tag;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -16,7 +18,7 @@ class ExpenseController extends Controller
     public function index(Request $request): Response
     {
         $days = $request->user()->expenses()
-            ->with('category')
+            ->with(['category', 'tags'])
             ->orderByDesc('date')
             ->orderByDesc('id')
             ->get()
@@ -29,6 +31,7 @@ class ExpenseController extends Controller
                     'amount' => $expense->amount,
                     'description' => $expense->description,
                     'category' => $expense->category?->name,
+                    'tags' => $expense->tags->pluck('name')->sort(SORT_NATURAL | SORT_FLAG_CASE)->values(),
                 ])->values(),
             ])
             ->values();
@@ -40,17 +43,22 @@ class ExpenseController extends Controller
     {
         return Inertia::render('Expenses/Create', [
             'categories' => $this->categoriesFor($request),
+            'tags' => $this->tagNamesFor($request),
         ]);
     }
 
     public function store(ExpenseRequest $request): RedirectResponse
     {
-        $request->user()->expenses()->create([
-            'amount' => $request->amountInCents(),
-            'date' => $request->validated('date'),
-            'description' => $request->validated('description'),
-            'category_id' => $request->validated('category_id'),
-        ]);
+        DB::transaction(function () use ($request) {
+            $expense = $request->user()->expenses()->create([
+                'amount' => $request->amountInCents(),
+                'date' => $request->validated('date'),
+                'description' => $request->validated('description'),
+                'category_id' => $request->validated('category_id'),
+            ]);
+
+            $this->syncTags($request, $expense);
+        });
 
         return redirect()->route('expenses.index');
     }
@@ -66,8 +74,10 @@ class ExpenseController extends Controller
                 'date' => $expense->date->toDateString(),
                 'description' => $expense->description,
                 'category_id' => $expense->category_id,
+                'tags' => $expense->tags()->orderBy('name')->pluck('name'),
             ],
             'categories' => $this->categoriesFor($request),
+            'tags' => $this->tagNamesFor($request),
         ]);
     }
 
@@ -75,12 +85,16 @@ class ExpenseController extends Controller
     {
         $this->authorizeOwner($request, $expense);
 
-        $expense->update([
-            'amount' => $request->amountInCents(),
-            'date' => $request->validated('date'),
-            'description' => $request->validated('description'),
-            'category_id' => $request->validated('category_id'),
-        ]);
+        DB::transaction(function () use ($request, $expense) {
+            $expense->update([
+                'amount' => $request->amountInCents(),
+                'date' => $request->validated('date'),
+                'description' => $request->validated('description'),
+                'category_id' => $request->validated('category_id'),
+            ]);
+
+            $this->syncTags($request, $expense);
+        });
 
         return redirect()->route('expenses.index');
     }
@@ -92,6 +106,32 @@ class ExpenseController extends Controller
         $expense->delete();
 
         return redirect()->route('expenses.index');
+    }
+
+    /**
+     * Nomes das tags do usuário, para sugerir na tela.
+     */
+    private function tagNamesFor(Request $request): Collection
+    {
+        return $request->user()->tags()->orderBy('name')->pluck('name');
+    }
+
+    /**
+     * Atribui ao gasto as tags informadas por nome. Reaproveita a tag que já existe
+     * (sem diferenciar maiúsculas e espaços nas pontas) e cria as que ainda não existem.
+     */
+    private function syncTags(ExpenseRequest $request, Expense $expense): void
+    {
+        $user = $request->user();
+        $existing = $user->tags()->get()->keyBy(fn (Tag $tag) => mb_strtolower($tag->name));
+
+        $ids = collect($request->validated('tags') ?? [])
+            ->map(fn (string $name) => trim($name))
+            ->filter(fn (string $name) => $name !== '')
+            ->unique(fn (string $name) => mb_strtolower($name))
+            ->map(fn (string $name) => ($existing->get(mb_strtolower($name)) ?? $user->tags()->create(['name' => $name]))->id);
+
+        $expense->tags()->sync($ids->all());
     }
 
     private function categoriesFor(Request $request): EloquentCollection

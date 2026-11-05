@@ -1,6 +1,8 @@
 <script setup>
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { Link, useForm } from '@inertiajs/vue3';
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+import { faPlus, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { normalizeAmount, toAmountInput } from '../utils/money.js';
 import { todayIso } from '../utils/date.js';
 
@@ -14,6 +16,11 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    /** Nomes das tags que já existem, para sugerir. */
+    tags: {
+        type: Array,
+        default: () => [],
+    },
 });
 
 const form = useForm({
@@ -21,9 +28,68 @@ const form = useForm({
     date: props.expense?.date ?? todayIso(),
     description: props.expense?.description ?? '',
     category_id: props.expense?.category_id ?? '',
+    tags: [...(props.expense?.tags ?? [])],
 });
 
 const amountInput = ref(null);
+const tagText = ref('');
+
+const sameTag = (a, b) => a.toLowerCase() === b.toLowerCase();
+
+const tagInput = ref(null);
+
+const addTag = (name) => {
+    const clean = String(name ?? '').trim();
+
+    if (clean && !form.tags.some((tag) => sameTag(tag, clean))) {
+        // Usa a grafia da tag que já existe, para a tela mostrar o mesmo nome de antes e depois de salvar.
+        form.tags.push(props.tags.find((tag) => sameTag(tag, clean)) ?? clean);
+    }
+
+    tagText.value = '';
+};
+
+// O botão clicado some da tela; devolve o foco ao campo para quem usa teclado ou leitor de tela.
+const addSuggestion = (name) => {
+    addTag(name);
+    tagInput.value?.focus();
+};
+
+const removeTag = (name) => {
+    form.tags = form.tags.filter((tag) => tag !== name);
+    tagInput.value?.focus();
+};
+
+// A vírgula também confirma a tag. Tratada no texto (e não na tecla) porque teclados de celular
+// nem sempre informam a tecla pressionada.
+watch(tagText, (text) => {
+    if (!text.includes(',')) return;
+
+    const parts = text.split(',');
+    const rest = parts.pop();
+
+    parts.forEach(addTag);
+    tagText.value = rest;
+});
+
+const onTagKeydown = (event) => {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        addTag(tagText.value);
+    }
+};
+
+// Sugestões: tags que já existem, ainda não escolhidas e que combinam com o que está sendo digitado.
+const suggestions = computed(() => {
+    const typed = tagText.value.trim().toLowerCase();
+
+    return props.tags
+        .filter((tag) => !form.tags.some((chosen) => sameTag(chosen, tag)))
+        .filter((tag) => tag.toLowerCase().includes(typed))
+        .slice(0, 10);
+});
+
+const tagError = computed(() => Object.entries(form.errors).find(([key]) => key === 'tags' || key.startsWith('tags.'))?.[1]);
 
 // Só no cadastro: na edição, abrir o teclado sem necessidade atrapalha no celular.
 onMounted(() => {
@@ -31,6 +97,8 @@ onMounted(() => {
 });
 
 const submit = () => {
+    addTag(tagText.value); // não perde a tag que foi digitada e ainda não confirmada
+
     const request = form.transform((data) => ({ ...data, amount: normalizeAmount(data.amount) }));
 
     if (props.expense) {
@@ -104,6 +172,45 @@ const submit = () => {
                 </option>
             </select>
             <p v-if="form.errors.category_id" class="error">{{ form.errors.category_id }}</p>
+        </div>
+
+        <div class="field">
+            <label for="tag-input" class="label">Tags <span class="optional">(opcional)</span></label>
+
+            <ul v-if="form.tags.length > 0" class="chips" aria-label="Tags do gasto">
+                <li v-for="tag in form.tags" :key="tag" class="chip">
+                    <span>{{ tag }}</span>
+                    <button type="button" class="chip-remove" :aria-label="`Retirar a tag ${tag}`" @click="removeTag(tag)">
+                        <FontAwesomeIcon :icon="faXmark" />
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tag-entry">
+                <input
+                    id="tag-input"
+                    ref="tagInput"
+                    v-model="tagText"
+                    type="text"
+                    maxlength="50"
+                    autocomplete="off"
+                    placeholder="Digite e tecle Enter"
+                    class="input"
+                    :class="{ 'input-error': tagError }"
+                    @keydown="onTagKeydown"
+                />
+                <button type="button" class="button button-secondary tag-add" :disabled="!tagText.trim()" aria-label="Adicionar tag" @click="addTag(tagText)">
+                    <FontAwesomeIcon :icon="faPlus" />
+                </button>
+            </div>
+
+            <ul v-if="suggestions.length > 0" class="chips" aria-label="Tags existentes">
+                <li v-for="tag in suggestions" :key="tag">
+                    <button type="button" class="chip chip-suggestion" @click="addSuggestion(tag)">{{ tag }}</button>
+                </li>
+            </ul>
+
+            <p v-if="tagError" class="error">{{ tagError }}</p>
         </div>
 
         <div class="actions">
@@ -181,6 +288,89 @@ const submit = () => {
     margin: 0;
     font-size: 0.875rem;
     color: #dc2626;
+}
+
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #4f46e5;
+    background-color: #eef2ff;
+    border: 1px solid transparent;
+    border-radius: 8px;
+}
+
+.chip-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    margin: -0.375rem -0.5rem -0.375rem 0;
+    padding: 0;
+    color: inherit;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.chip-remove:hover {
+    color: #dc2626;
+    background-color: #fee2e2;
+}
+
+.chip-remove:active {
+    transform: scale(0.95);
+}
+
+.chip-remove:focus-visible,
+.chip-suggestion:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
+}
+
+.chip-suggestion {
+    min-height: 44px;
+    padding: 0.5rem 1rem;
+    color: #374151;
+    background-color: white;
+    border-color: #d1d5db;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.chip-suggestion:hover {
+    color: #4f46e5;
+    background-color: #eef2ff;
+    border-color: #c7d2fe;
+}
+
+.chip-suggestion:active {
+    transform: scale(0.97);
+}
+
+.tag-entry {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.tag-add {
+    flex-shrink: 0;
+    padding: 0.75rem 1rem;
 }
 
 .actions {

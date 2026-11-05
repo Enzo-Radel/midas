@@ -60,7 +60,10 @@ const confirmDelete = () => {
                                 <span class="item-description" :class="{ 'item-description-empty': !expense.description }">
                                     {{ expense.description || 'Sem descrição' }}
                                 </span>
-                                <span v-if="expense.category" class="item-category">{{ expense.category }}</span>
+                                <span v-if="expense.category || expense.tags.length > 0" class="item-labels">
+                                    <span v-if="expense.category" class="item-category">{{ expense.category }}</span>
+                                    <span v-for="tag in expense.tags" :key="tag" class="item-tag">{{ tag }}</span>
+                                </span>
                             </span>
                             <span class="item-amount">{{ formatCents(expense.amount) }}</span>
                             <Link
@@ -230,8 +233,22 @@ const confirmDelete = () => {
     min-width: 0;
 }
 
+.item-labels {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+}
+
+.item-tag {
+    padding: 0.125rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #4b5563;
+    background-color: #f3f4f6;
+    border-radius: 8px;
+}
+
 .item-category {
-    align-self: flex-start;
     padding: 0.125rem 0.5rem;
     font-size: 0.75rem;
     font-weight: 600;

@@ -11,6 +11,10 @@ defineProps({
         type: Array,
         required: true,
     },
+    tags: {
+        type: Array,
+        required: true,
+    },
 });
 </script>
 
@@ -18,7 +22,7 @@ defineProps({
     <AppLayout>
         <div class="page">
             <h1 class="page-title">Editar gasto</h1>
-            <ExpenseForm :expense="expense" :categories="categories" />
+            <ExpenseForm :expense="expense" :categories="categories" :tags="tags" />
         </div>
     </AppLayout>
 </template>
