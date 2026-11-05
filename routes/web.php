@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ExampleController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\FavoriteController;
@@ -16,6 +17,9 @@ Route::middleware(UseDefaultUser::class)->group(function () {
     Route::get('/despesas/{expense}/editar', [ExpenseController::class, 'edit'])->name('expenses.edit');
     Route::put('/despesas/{expense}', [ExpenseController::class, 'update'])->name('expenses.update');
     Route::delete('/despesas/{expense}', [ExpenseController::class, 'destroy'])->name('expenses.destroy');
+    Route::get('/categorias', [CategoryController::class, 'index'])->name('categories.index');
+    Route::post('/categorias', [CategoryController::class, 'store'])->name('categories.store');
+    Route::put('/categorias/{category}', [CategoryController::class, 'update'])->name('categories.update');
     Route::get('/favoritos', [FavoriteController::class, 'index'])->name('favorites.index');
     Route::get('/favoritos/{favorite}/editar', [FavoriteController::class, 'edit'])->name('favorites.edit');
     Route::put('/favoritos/{favorite}', [FavoriteController::class, 'update'])->name('favorites.update');

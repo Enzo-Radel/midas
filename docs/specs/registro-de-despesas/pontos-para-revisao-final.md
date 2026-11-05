@@ -67,3 +67,10 @@ Itens levantados pelo revisor automático que não foram corrigidos na etapa e f
 - [ ] **Remover favorito herda dois pontos** — falha de rede fecha o diálogo sem aviso (etapa 04) e o foco cai no corpo da página depois da remoção (etapa 07).
 - [ ] **Estilo dos itens do menu depende de classes combinadas** — `menu-item`, `menu-icon` e `menu-item-danger` precisam ser usadas por quem usa o `ActionMenu` (já documentado no componente).
 - [ ] **Nome do favorito não acompanha a descrição** — depois de criado, mudar a descrição não muda o nome (e vice-versa). Decidir se, ao editar, o nome deveria acompanhar a descrição enquanto ele for igual a ela.
+
+## Etapa 11 — Criar e renomear categorias
+- [ ] **Três botões no cabeçalho da lista de despesas** — "Categorias", "Favoritos" e "Novo gasto" quebram em duas linhas no celular, e gerenciar categorias é uma ação rara com o mesmo peso visual de "Favoritos". Decidir junto com o ponto da etapa 09 (entrada no menu lateral, ou só ícones no celular). Os formulários de gasto também não têm atalho para criar categoria.
+- [ ] **Foco depois de salvar ou cancelar a renomeação** — o campo some e o foco cai no corpo da página; o encadeamento "fechar menu e focar o campo" depende da ordem (`close()` e depois `nextTick`). Vale um teste no teclado.
+- [ ] **Nomes que só diferem por espaços internos ou normalização Unicode** — "Casa  Nova" e "Casa Nova" contam como diferentes. A análise não pede; só uma observação.
+- [ ] **Menu de três pontos com um único item** — custa dois toques por ação até as etapas 12 a 14 acrescentarem Excluir e Desativar; reavaliar se a ordem das etapas mudar.
+- [ ] **Tela de categorias mais uma cópia de CSS de botão/campo** — ver o ponto de CSS repetido (etapas 01 e 09); a tela de tags (etapa 15) será a próxima.

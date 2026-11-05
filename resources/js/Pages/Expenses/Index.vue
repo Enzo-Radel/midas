@@ -2,7 +2,7 @@
 import { ref } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { faPlus, faStar } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faStar, faTags } from '@fortawesome/free-solid-svg-icons';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import ConfirmDialog from '../../Components/ConfirmDialog.vue';
 import ExpenseActionsMenu from '../../Components/ExpenseActionsMenu.vue';
@@ -37,6 +37,10 @@ const confirmDelete = () => {
             <div class="page-header">
                 <h1 class="page-title">Despesas</h1>
                 <div class="page-actions">
+                    <Link href="/categorias" class="button button-secondary">
+                        <FontAwesomeIcon :icon="faTags" />
+                        <span>Categorias</span>
+                    </Link>
                     <Link href="/favoritos" class="button button-secondary">
                         <FontAwesomeIcon :icon="faStar" />
                         <span>Favoritos</span>
