@@ -17,6 +17,9 @@ Route::middleware(UseDefaultUser::class)->group(function () {
     Route::put('/despesas/{expense}', [ExpenseController::class, 'update'])->name('expenses.update');
     Route::delete('/despesas/{expense}', [ExpenseController::class, 'destroy'])->name('expenses.destroy');
     Route::get('/favoritos', [FavoriteController::class, 'index'])->name('favorites.index');
+    Route::get('/favoritos/{favorite}/editar', [FavoriteController::class, 'edit'])->name('favorites.edit');
+    Route::put('/favoritos/{favorite}', [FavoriteController::class, 'update'])->name('favorites.update');
+    Route::delete('/favoritos/{favorite}', [FavoriteController::class, 'destroy'])->name('favorites.destroy');
     Route::get('/favoritos/{favorite}/usar', [FavoriteController::class, 'use'])->name('favorites.use');
     Route::post('/despesas/{expense}/favorito', [ExpenseController::class, 'favorite'])->name('expenses.favorite');
     Route::delete('/despesas/{expense}/favorito', [ExpenseController::class, 'unfavorite'])->name('expenses.unfavorite');

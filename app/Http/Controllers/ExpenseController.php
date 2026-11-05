@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ExpenseRequest;
 use App\Models\Expense;
-use App\Models\Tag;
 use App\Services\ExpenseFavorites;
+use App\Services\TagResolver;
 use App\Support\ExpenseFormData;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -162,21 +162,11 @@ class ExpenseController extends Controller
     }
 
     /**
-     * Atribui ao gasto as tags informadas por nome. Reaproveita a tag que já existe
-     * (sem diferenciar maiúsculas e espaços nas pontas) e cria as que ainda não existem.
+     * Atribui ao gasto as tags informadas por nome (ver TagResolver).
      */
     private function syncTags(ExpenseRequest $request, Expense $expense): void
     {
-        $user = $request->user();
-        $existing = $user->tags()->get()->keyBy(fn (Tag $tag) => mb_strtolower($tag->name));
-
-        $ids = collect($request->validated('tags') ?? [])
-            ->map(fn (string $name) => trim($name))
-            ->filter(fn (string $name) => $name !== '')
-            ->unique(fn (string $name) => mb_strtolower($name))
-            ->map(fn (string $name) => ($existing->get(mb_strtolower($name)) ?? $user->tags()->create(['name' => $name]))->id);
-
-        $expense->tags()->sync($ids->all());
+        $expense->tags()->sync(app(TagResolver::class)->idsFor($request->user(), $request->validated('tags') ?? []));
     }
 
     private function authorizeOwner(Request $request, Expense $expense): void

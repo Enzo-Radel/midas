@@ -1,8 +1,11 @@
 <script setup>
-import { Link } from '@inertiajs/vue3';
+import { ref } from 'vue';
+import { Link, router } from '@inertiajs/vue3';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { faArrowLeft, faStar } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faPen, faStar, faTrash } from '@fortawesome/free-solid-svg-icons';
 import AppLayout from '../../Layouts/AppLayout.vue';
+import ActionMenu from '../../Components/ActionMenu.vue';
+import ConfirmDialog from '../../Components/ConfirmDialog.vue';
 import { formatCents } from '../../utils/money.js';
 
 defineProps({
@@ -11,6 +14,20 @@ defineProps({
         required: true,
     },
 });
+
+const favoriteToRemove = ref(null);
+const removing = ref(false);
+
+const confirmRemove = () => {
+    router.delete(`/favoritos/${favoriteToRemove.value.id}`, {
+        preserveScroll: true,
+        onStart: () => (removing.value = true),
+        onFinish: () => {
+            removing.value = false;
+            favoriteToRemove.value = null;
+        },
+    });
+};
 
 // Favorito sem nome (criado de um gasto sem descrição) é identificado pelo valor e pela categoria.
 const title = (favorite) => {
@@ -43,7 +60,7 @@ const title = (favorite) => {
             </div>
 
             <ul v-else class="list">
-                <li v-for="favorite in favorites" :key="favorite.id">
+                <li v-for="favorite in favorites" :key="favorite.id" class="item">
                     <Link :href="`/favoritos/${favorite.id}/usar`" class="card">
                         <span class="card-main">
                             <span class="card-title" :class="{ 'card-title-fallback': !favorite.name }">{{ title(favorite) }}</span>
@@ -54,9 +71,36 @@ const title = (favorite) => {
                         </span>
                         <span class="card-amount">{{ formatCents(favorite.amount) }}</span>
                     </Link>
+                    <ActionMenu :label="`Ações do favorito: ${title(favorite)}`">
+                        <template #default="{ close }">
+                            <Link :href="`/favoritos/${favorite.id}/editar`" class="menu-item" role="menuitem">
+                                <FontAwesomeIcon class="menu-icon" :icon="faPen" />
+                                <span>Editar</span>
+                            </Link>
+                            <button
+                                type="button"
+                                class="menu-item menu-item-danger"
+                                role="menuitem"
+                                @click="close(); favoriteToRemove = favorite"
+                            >
+                                <FontAwesomeIcon class="menu-icon" :icon="faTrash" />
+                                <span>Remover</span>
+                            </button>
+                        </template>
+                    </ActionMenu>
                 </li>
             </ul>
         </div>
+
+        <ConfirmDialog
+            :open="favoriteToRemove !== null"
+            title="Remover este favorito?"
+            :message="favoriteToRemove ? `${title(favoriteToRemove)} será removido dos favoritos. Os gastos já registrados não são afetados.` : ''"
+            confirm-label="Remover"
+            :processing="removing"
+            @confirm="confirmRemove"
+            @cancel="favoriteToRemove = null"
+        />
     </AppLayout>
 </template>
 
@@ -180,7 +224,15 @@ const title = (favorite) => {
     list-style: none;
 }
 
+.item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 .card {
+    flex: 1;
+    min-width: 0;
     display: flex;
     align-items: center;
     justify-content: space-between;

@@ -16,6 +16,11 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    /** Favorito a editar: o formulário ganha o campo "Nome" e não tem data nem a opção de favoritar. */
+    favorite: {
+        type: Object,
+        default: null,
+    },
     /** Dados de um gasto a repetir: preenchem o cadastro, que segue criando um gasto novo com a data de hoje. */
     prefill: {
         type: Object,
@@ -33,10 +38,12 @@ const props = defineProps({
     },
 });
 
-// Edição e repetição começam dos dados de um gasto; só a edição leva a data dele.
-const source = props.expense ?? props.prefill;
+// Edição e repetição começam dos dados de um gasto ou favorito; só a edição de gasto leva a data dele.
+const source = props.expense ?? props.favorite ?? props.prefill;
+const editingFavorite = props.favorite !== null;
 
 const form = useForm({
+    name: props.favorite?.name ?? '',
     amount: source ? toAmountInput(source.amount) : '',
     date: props.expense?.date ?? todayIso(),
     description: source?.description ?? '',
@@ -113,9 +120,15 @@ onMounted(() => {
 const submit = () => {
     addTag(tagText.value); // não perde a tag que foi digitada e ainda não confirmada
 
-    const request = form.transform((data) => ({ ...data, amount: normalizeAmount(data.amount) }));
+    const request = form.transform(({ name, date, favorite, ...fields }) => ({
+        ...fields,
+        amount: normalizeAmount(fields.amount),
+        ...(editingFavorite ? { name } : { date, favorite }),
+    }));
 
-    if (props.expense) {
+    if (editingFavorite) {
+        request.put(`/favoritos/${props.favorite.id}`);
+    } else if (props.expense) {
         request.put(`/despesas/${props.expense.id}`);
     } else {
         request.post('/despesas');
@@ -125,6 +138,22 @@ const submit = () => {
 
 <template>
     <form class="form-card" novalidate @submit.prevent="submit">
+        <div v-if="editingFavorite" class="field">
+            <label for="name" class="label">Nome do favorito <span class="optional">(opcional)</span></label>
+            <input
+                id="name"
+                v-model="form.name"
+                type="text"
+                maxlength="255"
+                autocomplete="off"
+                placeholder="Ex.: Almoço no trabalho"
+                class="input"
+                :class="{ 'input-error': form.errors.name }"
+            />
+            <p v-if="form.errors.name" class="error">{{ form.errors.name }}</p>
+            <p v-else class="hint">Se ficar vazio, o favorito é identificado pelo valor e pela categoria.</p>
+        </div>
+
         <div class="field">
             <label for="amount" class="label">Valor (R$)</label>
             <input
@@ -143,7 +172,7 @@ const submit = () => {
             <p v-if="form.errors.amount" id="amount-error" class="error">{{ form.errors.amount }}</p>
         </div>
 
-        <div class="field">
+        <div v-if="!editingFavorite" class="field">
             <label for="date" class="label">Data</label>
             <input
                 id="date"
@@ -227,7 +256,7 @@ const submit = () => {
             <p v-if="tagError" class="error">{{ tagError }}</p>
         </div>
 
-        <label class="check">
+        <label v-if="!editingFavorite" class="check">
             <input v-model="form.favorite" type="checkbox" class="check-input" />
             <span class="check-text">
                 <span class="check-title">Salvar nos favoritos</span>
@@ -304,6 +333,12 @@ const submit = () => {
 .input-error:focus {
     border-color: #ef4444;
     box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+.hint {
+    margin: 0;
+    font-size: 0.875rem;
+    color: #6b7280;
 }
 
 .error {

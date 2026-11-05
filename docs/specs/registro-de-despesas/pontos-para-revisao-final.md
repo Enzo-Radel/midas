@@ -60,3 +60,10 @@ Itens levantados pelo revisor automático que não foram corrigidos na etapa e f
 - [ ] **CSS de página, botão e cartão repetido** — a tela de favoritos é mais uma cópia dos estilos de botão e título (ver o ponto da etapa 01); vale extrair componentes compartilhados antes de a tela de categorias (etapa 11) e a de tags (etapa 15) entrarem.
 - [ ] **Valor aparece duas vezes no favorito sem nome** — o título é "R$ 12,00 · Transporte" e o valor também aparece à direita. Decidir se o título deve ser só a categoria.
 - [ ] **Mensagem de lista vazia e acesso sem teste automatizado** — verificados só no navegador.
+
+## Etapa 10 — Gerenciar favoritos
+- [ ] **Validação antes da checagem de dono** — ao alterar um favorito de outro usuário com dados inválidos a resposta é o erro de validação, e só com dados válidos é "não encontrado" (não vaza dados). Decidir se a checagem de dono deve vir antes (em `authorize()` da requisição), valendo também para gastos.
+- [ ] **Formulário com três papéis** — `ExpenseForm` serve a gasto novo, edição de gasto e edição de favorito, e o ajuste dos campos enviados fica num `transform` verificado só no navegador. Decidir se vale separar ou cobrir com teste de componente.
+- [ ] **Remover favorito herda dois pontos** — falha de rede fecha o diálogo sem aviso (etapa 04) e o foco cai no corpo da página depois da remoção (etapa 07).
+- [ ] **Estilo dos itens do menu depende de classes combinadas** — `menu-item`, `menu-icon` e `menu-item-danger` precisam ser usadas por quem usa o `ActionMenu` (já documentado no componente).
+- [ ] **Nome do favorito não acompanha a descrição** — depois de criado, mudar a descrição não muda o nome (e vice-versa). Decidir se, ao editar, o nome deveria acompanhar a descrição enquanto ele for igual a ela.
