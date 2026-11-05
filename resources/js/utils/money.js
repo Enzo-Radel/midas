@@ -18,3 +18,8 @@ export function normalizeAmount(text) {
 
     return value;
 }
+
+/** Converte o valor vindo do servidor ("25.50") para o texto do campo ("25,50"). */
+export function toAmountInput(amount) {
+    return String(amount).replace('.', ',');
+}

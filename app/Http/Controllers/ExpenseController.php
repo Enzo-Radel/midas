@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreExpenseRequest;
+use App\Http\Requests\ExpenseRequest;
 use App\Models\Expense;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -38,7 +38,7 @@ class ExpenseController extends Controller
         return Inertia::render('Expenses/Create');
     }
 
-    public function store(StoreExpenseRequest $request): RedirectResponse
+    public function store(ExpenseRequest $request): RedirectResponse
     {
         $request->user()->expenses()->create([
             'amount' => $request->amountInCents(),
@@ -47,5 +47,37 @@ class ExpenseController extends Controller
         ]);
 
         return redirect()->route('expenses.index');
+    }
+
+    public function edit(Request $request, Expense $expense): Response
+    {
+        $this->authorizeOwner($request, $expense);
+
+        return Inertia::render('Expenses/Edit', [
+            'expense' => [
+                'id' => $expense->id,
+                'amount' => number_format($expense->amount / 100, 2, '.', ''),
+                'date' => $expense->date->toDateString(),
+                'description' => $expense->description,
+            ],
+        ]);
+    }
+
+    public function update(ExpenseRequest $request, Expense $expense): RedirectResponse
+    {
+        $this->authorizeOwner($request, $expense);
+
+        $expense->update([
+            'amount' => $request->amountInCents(),
+            'date' => $request->validated('date'),
+            'description' => $request->validated('description'),
+        ]);
+
+        return redirect()->route('expenses.index');
+    }
+
+    private function authorizeOwner(Request $request, Expense $expense): void
+    {
+        abort_unless($expense->user_id === $request->user()->id, 404);
     }
 }

@@ -1,7 +1,7 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { faPlus } from '@fortawesome/free-solid-svg-icons';
+import { faPen, faPlus } from '@fortawesome/free-solid-svg-icons';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import { formatCents } from '../../utils/money.js';
 import { formatDayLabel } from '../../utils/date.js';
@@ -44,6 +44,14 @@ defineProps({
                                 {{ expense.description || 'Sem descrição' }}
                             </span>
                             <span class="item-amount">{{ formatCents(expense.amount) }}</span>
+                            <Link
+                                :href="`/despesas/${expense.id}/editar`"
+                                class="item-action"
+                                title="Editar gasto"
+                                :aria-label="`Editar gasto: ${expense.description || 'sem descrição'}`"
+                            >
+                                <FontAwesomeIcon :icon="faPen" />
+                            </Link>
                         </li>
                     </ul>
                 </section>
@@ -177,6 +185,8 @@ defineProps({
 }
 
 .item-description {
+    flex: 1;
+    min-width: 0;
     font-weight: 500;
     color: #1f2937;
     overflow: hidden;
@@ -193,6 +203,35 @@ defineProps({
     font-weight: 600;
     color: #1f2937;
     white-space: nowrap;
+}
+
+.item-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    color: #6b7280;
+    background-color: transparent;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.item-action:hover {
+    color: #4f46e5;
+    background-color: #eef2ff;
+}
+
+.item-action:active {
+    background-color: #e0e7ff;
+    transform: scale(0.95);
+}
+
+.item-action:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
 }
 
 @media (max-width: 768px) {
