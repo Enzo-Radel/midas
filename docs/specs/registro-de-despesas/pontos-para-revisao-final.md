@@ -82,9 +82,16 @@ Itens levantados pelo revisor automático que não foram corrigidos na etapa e f
 - [ ] **"Cancelar não muda nada" e "Excluir oculto" sem teste automatizado** — verificados só no navegador (sem teste de componente no projeto).
 
 ## Etapa 13 — Desativar e reativar categoria
-- [ ] **Categoria desativada e em uso não tem "Excluir" no menu** — a etapa 14 ("excluir e trocar") precisa estar disponível também para ela; decidir lá se "Excluir" aparece para toda categoria em uso, em qualquer estado.
-- [ ] **"Desativar" e "Excluir" levam ao mesmo lugar para categoria ativa em uso** — a ação aparece duas vezes e "Excluir" nunca exclui; a etapa 14 deve trocar o diálogo (oferecendo excluir com troca além de desativar).
+- [x] **Categoria desativada e em uso não tem "Excluir" no menu** — resolvido na etapa 14.
+- [x] **"Desativar" e "Excluir" levam ao mesmo lugar para categoria ativa em uso** — resolvido na etapa 14 (o diálogo agora oferece excluir com troca; "Só desativar" continua disponível).
 - [ ] **Testes dependem de "8 categorias" iniciais** — vários testes contam `has('categories', 8)`/`7`; se a lista inicial mudar, eles quebram. Derivar a contagem do banco.
 - [ ] **Desativar e reativar sem estado de processamento** — clique duplo dispara duas requisições (idempotentes, sem efeito); nenhuma falha de rede é avisada.
 - [ ] **Aviso ao repetir só aparece na carga da tela** — some se houver erro de validação na categoria depois; aceitável.
 - [ ] **Fluxo do diálogo "em uso" e o menu condicional sem teste automatizado** — verificados só no navegador.
+
+## Etapa 14 — Excluir categoria em uso com troca
+- [ ] **Destino pode mudar entre a validação e a troca** — só a categoria excluída é travada; se o destino for desativado ou excluído nesse meio-tempo, os gastos vão para uma categoria que acabou de sumir (no MySQL a chave estrangeira recusa e vira erro 500). A janela é mínima num sistema de um usuário; decidir se vale travar o destino também.
+- [ ] **Defeito da etapa 13 só apareceria na tela** — o helper chamava `router.delete` com a assinatura errada e nenhum teste de backend pega isso; reforça o ponto de ter teste de componente ou de ponta a ponta.
+- [ ] **Esc com o seletor aberto fecha o diálogo inteiro** — é o comportamento padrão do navegador, mas pode surpreender.
+- [ ] **Testes dependem da ordem e do número de categorias iniciais** — `test_after_the_swap...` assume 7 categorias e `categories.0` = "Alimentação"; se a lista inicial ou a ordem mudarem, quebra por motivo alheio.
+- [ ] **Troca para destino inválido não recarrega a lista** — o aviso aparece, mas a lista de destinos só atualiza na próxima navegação.

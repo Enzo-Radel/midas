@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\CategoryRequest;
+use App\Http\Requests\DestroyCategoryRequest;
 use App\Models\Category;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -68,20 +69,37 @@ class CategoryController extends Controller
     }
 
     /**
-     * Exclui uma categoria que ninguém usa. Categoria usada por gasto ou favorito não pode ser
-     * excluída assim: ela precisa ser desativada ou trocada antes (etapas seguintes).
+     * Exclui a categoria. Se ninguém a usa, é só excluir. Se ela está em uso por gastos ou
+     * favoritos, o pedido precisa dizer para onde eles vão (outra categoria ativa ou nenhuma);
+     * sem isso a categoria não é excluída.
      */
-    public function destroy(Request $request, Category $category): RedirectResponse
+    public function destroy(DestroyCategoryRequest $request, Category $category): RedirectResponse
     {
         abort_unless($category->user_id === $request->user()->id, 404);
 
-        // Checagem e exclusão juntas, com a categoria travada: se um gasto passar a usá-la nesse
-        // meio-tempo, ela não é apagada (o banco deixaria o gasto sem categoria em silêncio).
-        $deleted = DB::transaction(function () use ($category) {
+        $replacementId = $request->validated('replacement_id');
+        $withoutCategory = $request->boolean('without_category');
+
+        // Tudo numa transação, com a categoria travada: mover os gastos e favoritos e excluir a
+        // categoria acontecem juntos, e um gasto que passe a usá-la no meio do caminho não é perdido.
+        $deleted = DB::transaction(function () use ($category, $replacementId, $withoutCategory) {
             $locked = Category::whereKey($category->getKey())->lockForUpdate()->first();
 
-            if (! $locked || $locked->expenses()->exists() || $locked->favorites()->exists()) {
+            if (! $locked) {
                 return false;
+            }
+
+            $inUse = $locked->expenses()->exists() || $locked->favorites()->exists();
+
+            if ($inUse) {
+                if ($replacementId === null && ! $withoutCategory) {
+                    return false;
+                }
+
+                $newId = $replacementId; // nulo = sem categoria
+
+                $locked->expenses()->update(['category_id' => $newId]);
+                $locked->favorites()->update(['category_id' => $newId]);
             }
 
             $locked->delete();
@@ -90,7 +108,7 @@ class CategoryController extends Controller
         });
 
         if (! $deleted) {
-            return back()->withErrors(['category' => 'Esta categoria está em uso em gastos ou favoritos e não pode ser excluída.']);
+            return back()->withErrors(['category' => 'Esta categoria está em uso em gastos ou favoritos. Escolha para onde eles vão para poder excluí-la.']);
         }
 
         return redirect()->route('categories.index');

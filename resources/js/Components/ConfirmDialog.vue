@@ -26,6 +26,11 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    /** Desabilita o botão de confirmar (ex.: enquanto falta uma escolha no conteúdo do diálogo). */
+    confirmDisabled: {
+        type: Boolean,
+        default: false,
+    },
     /** 'danger' para ações destrutivas (padrão); 'primary' para ações reversíveis. */
     variant: {
         type: String,
@@ -55,7 +60,7 @@ const onKeydown = (event) => {
     if (event.key !== 'Tab' || !dialog.value) return;
 
     // Mantém o foco dentro do diálogo enquanto ele está aberto.
-    const focusable = [...dialog.value.querySelectorAll('button:not(:disabled)')];
+    const focusable = [...dialog.value.querySelectorAll('button:not(:disabled), select:not(:disabled), input:not(:disabled)')];
     if (focusable.length === 0) return;
 
     const first = focusable[0];
@@ -105,6 +110,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                 <h2 :id="`${id}-title`" class="dialog-title">{{ title }}</h2>
                 <p v-if="message" :id="`${id}-message`" class="dialog-message">{{ message }}</p>
 
+                <slot />
+
                 <div class="dialog-actions">
                     <button
                         ref="cancelButton"
@@ -115,11 +122,12 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                     >
                         {{ cancelLabel }}
                     </button>
+                    <slot name="extra-actions" />
                     <button
                         type="button"
                         class="button"
                         :class="variant === 'primary' ? 'button-primary' : 'button-danger'"
-                        :disabled="processing"
+                        :disabled="processing || confirmDisabled"
                         @click="emit('confirm')"
                     >
                         {{ confirmLabel }}
@@ -166,6 +174,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 
 .dialog-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 0.75rem;
     justify-content: flex-end;
 }
@@ -232,7 +241,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 
 @media (max-width: 768px) {
     .dialog-actions .button {
-        flex: 1;
+        flex: 1 1 auto;
     }
 }
 </style>

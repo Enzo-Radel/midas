@@ -7,14 +7,14 @@ import AppLayout from '../../Layouts/AppLayout.vue';
 import ActionMenu from '../../Components/ActionMenu.vue';
 import ConfirmDialog from '../../Components/ConfirmDialog.vue';
 
-defineProps({
+const props = defineProps({
     categories: {
         type: Array,
         required: true,
     },
 });
 
-// Categoria usada por gasto ou favorito não pode ser excluída por aqui.
+// Categoria em uso é a que gastos ou favoritos ainda usam; ela só é excluída dizendo para onde eles vão.
 const inUse = (category) => category.expenses_count + category.favorites_count > 0;
 
 const plural = (count, one, many) => `${count} ${count === 1 ? one : many}`;
@@ -30,41 +30,54 @@ const usage = (category) => {
         .join(' · ');
 };
 
-// Diálogo aberto: exclusão de categoria sem uso, ou aviso de que uma categoria em uso não pode
-// ser excluída (com a opção de desativá-la).
-const dialog = ref(null); // { type: 'delete' | 'in-use', category }
+// Diálogo aberto: exclusão de categoria sem uso, ou de categoria em uso (que precisa dizer para
+// onde vão os gastos e favoritos dela, ou ser apenas desativada).
+const dialog = ref(null); // { type: 'delete' | 'replace', category }
+const replacement = ref(''); // '' (não escolhido) | 'none' | id da categoria que recebe os gastos
 const working = ref(false);
 
 const askDelete = (category) => {
-    dialog.value = { type: inUse(category) ? 'in-use' : 'delete', category };
+    replacement.value = '';
+    dialog.value = { type: inUse(category) ? 'replace' : 'delete', category };
 };
 
 const closeDialog = () => {
     dialog.value = null;
 };
 
-const request = (method, url) => {
-    router[method](url, {}, {
+// Categorias ativas, exceto a que está sendo excluída, para receber os gastos e favoritos dela.
+const destinations = () => props.categories.filter((category) => category.active && category.id !== dialog.value?.category.id);
+
+const visit = (method, url, data = {}) => {
+    const options = {
         preserveScroll: true,
         onStart: () => (working.value = true),
         onFinish: () => {
             working.value = false;
             closeDialog();
         },
-    });
+    };
+
+    // O `delete` do Inertia recebe (url, opções); o corpo do pedido vai em `data`.
+    if (method === 'delete') router.delete(url, { ...options, data });
+    else router.post(url, data, options);
 };
 
 const confirmDialog = () => {
     const { type, category } = dialog.value;
 
-    if (type === 'delete') request('delete', `/categorias/${category.id}`);
-    else request('post', `/categorias/${category.id}/desativar`);
+    if (type === 'delete') {
+        visit('delete', `/categorias/${category.id}`);
+    } else if (replacement.value === 'none') {
+        visit('delete', `/categorias/${category.id}`, { without_category: true });
+    } else {
+        visit('delete', `/categorias/${category.id}`, { replacement_id: Number(replacement.value) });
+    }
 };
 
-const deactivate = (category) => router.post(`/categorias/${category.id}/desativar`, {}, { preserveScroll: true });
-const reactivate = (category) => router.post(`/categorias/${category.id}/reativar`, {}, { preserveScroll: true });
+const deactivateFromDialog = () => visit('post', `/categorias/${dialog.value.category.id}/desativar`);
 
-const dialogTitle = () => (dialog.value?.type === 'delete' ? 'Excluir esta categoria?' : 'Esta categoria está em uso');
+const dialogTitle = () => (dialog.value?.type === 'delete' ? 'Excluir esta categoria?' : 'Excluir categoria em uso');
 
 const dialogMessage = () => {
     if (!dialog.value) return '';
@@ -73,8 +86,11 @@ const dialogMessage = () => {
 
     if (type === 'delete') return `A categoria ${category.name} não está em uso e será removida.`;
 
-    return `${category.name} é usada em ${usage(category)} e por isso não pode ser excluída. Você pode desativá-la: ela deixa de aparecer para escolha, mas continua nos gastos e favoritos que já a usam.`;
+    return `${category.name} é usada em ${usage(category)}. Para excluí-la, escolha para onde eles vão.`;
 };
+
+const deactivate = (category) => router.post(`/categorias/${category.id}/desativar`, {}, { preserveScroll: true });
+const reactivate = (category) => router.post(`/categorias/${category.id}/reativar`, {}, { preserveScroll: true });
 
 const createForm = useForm({ name: '' });
 
@@ -123,7 +139,9 @@ const saveRename = (category) => {
                 <h1 class="page-title">Categorias</h1>
             </div>
 
-            <p v-if="$page.props.errors?.category" class="alert" role="alert">{{ $page.props.errors.category }}</p>
+            <p v-if="$page.props.errors?.category || $page.props.errors?.replacement_id" class="alert" role="alert">
+                {{ $page.props.errors.category || $page.props.errors.replacement_id }}
+            </p>
 
             <form class="card add" novalidate @submit.prevent="createCategory">
                 <label for="new-category" class="label">Nova categoria</label>
@@ -202,7 +220,6 @@ const saveRename = (category) => {
                                     <span>Reativar</span>
                                 </button>
                                 <button
-                                    v-if="!inUse(category) || category.active"
                                     type="button"
                                     class="menu-item menu-item-danger"
                                     role="menuitem"
@@ -222,12 +239,29 @@ const saveRename = (category) => {
             :open="dialog !== null"
             :title="dialogTitle()"
             :message="dialogMessage()"
-            :confirm-label="dialog?.type === 'delete' ? 'Excluir' : 'Desativar'"
-            :variant="dialog?.type === 'delete' ? 'danger' : 'primary'"
+            :confirm-label="dialog?.type === 'delete' ? 'Excluir' : 'Excluir e trocar'"
+            :confirm-disabled="dialog?.type === 'replace' && replacement === ''"
             :processing="working"
             @confirm="confirmDialog"
             @cancel="closeDialog"
-        />
+        >
+            <div v-if="dialog?.type === 'replace'" class="destination">
+                <label for="destination" class="label">Mover os gastos e favoritos para</label>
+                <select id="destination" v-model="replacement" class="input">
+                    <option value="" disabled>Escolha uma opção</option>
+                    <option value="none">Sem categoria</option>
+                    <option v-for="category in destinations()" :key="category.id" :value="String(category.id)">
+                        {{ category.name }}
+                    </option>
+                </select>
+            </div>
+
+            <template v-if="dialog?.type === 'replace' && dialog.category.active" #extra-actions>
+                <button type="button" class="button button-secondary" :disabled="working" @click="deactivateFromDialog">
+                    Só desativar
+                </button>
+            </template>
+        </ConfirmDialog>
     </AppLayout>
 </template>
 
@@ -447,6 +481,13 @@ const saveRename = (category) => {
     font-weight: 500;
     color: #1f2937;
     overflow-wrap: anywhere;
+}
+
+.destination {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    margin-bottom: 1.5rem;
 }
 
 .info-inactive .name {
