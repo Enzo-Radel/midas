@@ -61,3 +61,4 @@ Um cadastro curto, em que só o valor é obrigatório e a data já vem como hoje
 ## Detalhes
 - [fluxo-do-usuario.md](fluxo-do-usuario.md) — telas e passos de cadastrar, repetir, favoritar e revisar; abra ao implementar ou testar as telas.
 - [categorias-e-tags.md](categorias-e-tags.md) — regras completas de criar, desativar e excluir categorias e tags, e o efeito em gastos e favoritos; abra ao implementar essa gestão.
+- [etapas/](etapas/) — etapas de desenvolvimento, uma por arquivo, em ordem; abra ao implementar.
