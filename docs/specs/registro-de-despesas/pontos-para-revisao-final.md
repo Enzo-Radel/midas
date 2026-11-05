@@ -46,7 +46,7 @@ Itens levantados pelo revisor automático que não foram corrigidos na etapa e f
 - [ ] **Menu e repetir sem teste automatizado** — verificados só no navegador (sem teste de componente no projeto).
 
 ## Etapa 08 — Favoritar um gasto
-- [ ] **Etapas 12 a 15 precisam tratar favoritos** — o favorito aponta para as mesmas categorias e tags do usuário: renomear aparece nele (bom), mas excluir uma tag apaga o vínculo em silêncio e excluir uma categoria deixa o favorito sem categoria. A exclusão com troca (etapa 14) e a de tags (etapa 15) devem reatribuir também os favoritos e ter teste para isso; as contagens de uso vão precisar de `Tag::favorites` e `Category::favorites`.
+- [x] **Etapas 12 a 15 precisam tratar favoritos** — resolvido: a exclusão com troca (etapa 14) move também os favoritos e a exclusão de tag (etapa 15) os retira por cascade; a parte de `Tag::favorites` existe. (Texto original:) — o favorito aponta para as mesmas categorias e tags do usuário: renomear aparece nele (bom), mas excluir uma tag apaga o vínculo em silêncio e excluir uma categoria deixa o favorito sem categoria. A exclusão com troca (etapa 14) e a de tags (etapa 15) devem reatribuir também os favoritos e ter teste para isso; as contagens de uso vão precisar de `Tag::favorites` e `Category::favorites`.
 - [ ] **Exibição do favorito sem descrição** — o nome fica vazio e o valor e a categoria são guardados; a regra de exibição ("valor e categoria") fica para a lista de favoritos (etapa 09). Conferir lá.
 - [ ] **Desfavoritar apaga o favorito mesmo se ele foi renomeado/editado** (a partir da etapa 10) — bate com "remover", mas vale confirmar se um aviso é desejado.
 - [ ] **Texto da opção "Salvar nos favoritos"** — não diz que editar o gasto depois não atualiza o favorito. Decidir se vale esclarecer.
@@ -101,3 +101,11 @@ Itens levantados pelo revisor automático que não foram corrigidos na etapa e f
 - [ ] **A regra de nome único compartilhada não tem teste próprio** — é coberta pelos testes de categorias e de tags; baixo risco.
 - [ ] **Tela de tags não cria tags** — por decisão da análise elas nascem no formulário de gasto; decidir se vale um campo "Nova tag" na tela, como nas categorias.
 - [ ] **Quarta tela com CSS de botões/campos copiado** — Tags, Categorias, Favoritos e Despesas repetem estilos; vale extrair componentes compartilhados (ver o ponto da etapa 01).
+
+## Revisão final da tarefa
+Corrigidos na revisão final: documentação desatualizada (fluxo do usuário, análise e detalhe de categorias e tags), imports sem uso e formatação nos arquivos da tarefa (Pint), hover dos botões secundários desabilitados, nota na etapa 12 sobre o que as etapas 13 e 14 mudaram. Para você avaliar:
+- [ ] **A lista de despesas carrega todos os gastos, sem paginação** — o histórico cresce sem teto e o agrupamento por dia é feito em PHP. Com o uso diário a lista vai ficar pesada no celular com o tempo. Decidir se vale paginar (por exemplo, por mês) ou limitar o período exibido.
+- [ ] **`nullOnDelete` em `expenses.category_id` e `favorites.category_id`** — as etapas 05 e 12 mandaram decidir na etapa 14, que não decidiu. As telas já impedem apagar categoria em uso sem destino; resta escolher entre manter ou `restrictOnDelete` (garantia no banco, mas com atenção à exclusão de usuário).
+- [ ] **Índice em `expense_tag.tag_id` e `favorite_tag.tag_id`** — a chave primária é `(gasto, tag)`, então as contagens e a exclusão por tag (tela de tags) não usam índice no MySQL. Vale criar índices simples.
+- [ ] **Métodos de relação sem uso** — `Favorite::sourceExpense`, `Favorite::user`, `Category::user` e `Tag::user`. Baratos; remover ou manter por completude.
+- [ ] **Controladores `Api/*` fora do padrão do Pint** — anteriores a esta tarefa; não foram alterados.

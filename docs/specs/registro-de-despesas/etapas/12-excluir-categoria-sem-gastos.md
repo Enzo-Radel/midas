@@ -31,6 +31,9 @@ Na tela de categorias, uma categoria que nenhum gasto usa pode ser excluída com
 **Desvios do planejado**
 - "Em uso" considera gastos **e favoritos** (a etapa só fala em gastos). Assim um favorito nunca fica sem categoria em silêncio, de acordo com a análise ("a exclusão com troca também reatribui favoritos"). Uma categoria usada só por favoritos precisa ser tratada pelas etapas 13 e 14 (desativar ou trocar), ou o favorito removido antes.
 
+**Atualizações posteriores**
+- A etapa 13 passou a mostrar "Excluir" também para categoria ativa em uso (como diálogo que oferece desativar) e a 14 a oferecer excluir com troca; o aviso de recusa do servidor passou a dizer "Escolha para onde eles vão para poder excluí-la.". O que esta etapa entregou (excluir categoria sem uso, e o servidor recusar exclusão de categoria em uso sem destino) continua valendo.
+
 **Revisão automática**
 - Corrigido: exclusão numa transação com a categoria travada, asserção que não verificava nada no teste, cor do aviso na paleta de perigo.
 - Pontos não corrigidos estão em `../pontos-para-revisao-final.md`.

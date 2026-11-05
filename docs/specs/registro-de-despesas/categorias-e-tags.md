@@ -20,7 +20,7 @@ Regras de gestão de categorias e tags e o efeito delas sobre gastos e favoritos
 - Repetir um favorito (ou gasto) com categoria desativada: o cadastro abre sem categoria, com um aviso de que a categoria original está desativada. Ao editar um gasto antigo que já tem categoria desativada, ela continua lá enquanto não for trocada.
 
 ## Tags
-- Começam vazias; são criadas na hora de atribuir a um gasto (ou numa tela de gestão).
+- Começam vazias; são criadas na hora de atribuir a um gasto. A tela de tags só renomeia e exclui.
 - Um gasto pode ter várias tags, ou nenhuma.
 - Não podem existir duas tags com o mesmo nome (sem diferenciar maiúsculas de minúsculas).
 - Podem ser renomeadas e excluídas; excluir uma tag apenas a retira dos gastos e favoritos que a tinham, sem outras consequências.

@@ -286,7 +286,7 @@ const deleteMessage = () => {
     border-color: #d1d5db;
 }
 
-.button-secondary:hover {
+.button-secondary:hover:not(:disabled) {
     background-color: #f3f4f6;
     border-color: #9ca3af;
 }

@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Expenses;
 
-use App\Models\Expense;
 use App\Models\Favorite;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;

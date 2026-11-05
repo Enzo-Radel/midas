@@ -20,7 +20,8 @@ Um cadastro curto, em que só o valor é obrigatório e a data já vem como hoje
 - Repetir qualquer gasto, favorito ou não.
 - Favoritar gastos no cadastro, na edição ou a partir da lista; gerenciar a lista de favoritos (editar, renomear, remover).
 - Lista de gastos no estilo extrato, com separadores por dia e o total do dia.
-- Gerenciar categorias (já vêm cadastradas; podem ser criadas, editadas, desativadas, reativadas e excluídas) e tags (criadas livremente).
+- Gerenciar categorias (já vêm cadastradas; podem ser criadas, renomeadas, desativadas, reativadas e excluídas, com troca quando em uso) e tags (criadas ao atribuir a um gasto; renomeadas e excluídas por uma tela própria).
+- Atalhos na lista de despesas para favoritos, categorias e tags.
 - Uso confortável no celular.
 
 **Não inclui:**
@@ -30,22 +31,22 @@ Um cadastro curto, em que só o valor é obrigatório e a data já vem como hoje
 - Sugestão automática ao digitar.
 
 ## Critérios de aceite
-- [ ] Dá para salvar um gasto informando só o valor; a data vem preenchida com hoje e pode ser alterada.
-- [ ] O sistema não aceita salvar sem valor, com valor zero ou negativo, nem sem data.
-- [ ] Descrição, categoria (no máximo uma) e tags (várias) são opcionais.
-- [ ] Datas passadas, a de hoje e datas futuras são aceitas.
-- [ ] Repetir um gasto da lista abre o cadastro com os mesmos dados e a data de hoje; nada é salvo até a pessoa confirmar, e qualquer campo pode ser alterado antes.
-- [ ] Repetir um gasto não altera o gasto original.
-- [ ] Dá para favoritar um gasto no cadastro, na edição ou direto da lista, inclusive um gasto que veio de um favorito.
-- [ ] Na lista de favoritos, tocar num favorito abre o cadastro preenchido com os dados dele e a data de hoje, como no repetir.
-- [ ] Editar ou excluir o gasto que deu origem a um favorito não altera nem remove o favorito.
-- [ ] Um favorito pode ser renomeado, editado e removido sem afetar nenhum gasto.
-- [ ] A lista de gastos mostra do mais recente para o mais antigo, com um separador por dia exibindo a data e o total gasto naquele dia.
-- [ ] Da lista, cada gasto pode ser editado, excluído (com confirmação), repetido e favoritado.
-- [ ] Na primeira vez, já existem as categorias Alimentação, Transporte, Moradia, Saúde, Lazer, Educação, Compras e Outros; nenhuma tag existe.
-- [ ] Categorias podem ser criadas e renomeadas; tags podem ser criadas na hora de atribuir e também excluídas.
-- [ ] Uma categoria sem gastos é excluída normalmente; uma categoria com gastos oferece desativar ou excluir trocando-a por outra (ou deixando sem categoria) nos gastos que a usam.
-- [ ] Uma categoria desativada não aparece para escolha em gastos novos, continua visível nos gastos antigos e pode ser reativada.
+- [x] Dá para salvar um gasto informando só o valor; a data vem preenchida com hoje e pode ser alterada.
+- [x] O sistema não aceita salvar sem valor, com valor zero ou negativo, nem sem data.
+- [x] Descrição, categoria (no máximo uma) e tags (várias) são opcionais.
+- [x] Datas passadas, a de hoje e datas futuras são aceitas.
+- [x] Repetir um gasto da lista abre o cadastro com os mesmos dados e a data de hoje; nada é salvo até a pessoa confirmar, e qualquer campo pode ser alterado antes.
+- [x] Repetir um gasto não altera o gasto original.
+- [x] Dá para favoritar um gasto no cadastro, na edição ou direto da lista, inclusive um gasto que veio de um favorito.
+- [x] Na lista de favoritos, tocar num favorito abre o cadastro preenchido com os dados dele e a data de hoje, como no repetir.
+- [x] Editar ou excluir o gasto que deu origem a um favorito não altera nem remove o favorito.
+- [x] Um favorito pode ser renomeado, editado e removido sem afetar nenhum gasto.
+- [x] A lista de gastos mostra do mais recente para o mais antigo, com um separador por dia exibindo a data e o total gasto naquele dia.
+- [x] Da lista, cada gasto pode ser editado, excluído (com confirmação), repetido e favoritado.
+- [x] Na primeira vez, já existem as categorias Alimentação, Transporte, Moradia, Saúde, Lazer, Educação, Compras e Outros; nenhuma tag existe.
+- [x] Categorias podem ser criadas e renomeadas; tags podem ser criadas na hora de atribuir, e renomeadas e excluídas por uma tela de tags (excluir uma tag só a retira dos gastos e favoritos).
+- [x] Uma categoria sem gastos é excluída normalmente; uma categoria com gastos oferece desativar ou excluir trocando-a por outra (ou deixando sem categoria) nos gastos que a usam.
+- [x] Uma categoria desativada não aparece para escolha em gastos novos, continua visível nos gastos antigos e pode ser reativada.
 
 ## Decisões
 - Só o valor é obrigatório; a data vem com hoje — valor e data são o mínimo que faz sentido; na correria o resto pode ficar para a revisão.
@@ -53,9 +54,12 @@ Um cadastro curto, em que só o valor é obrigatório e a data já vem como hoje
 - O favorito é uma cópia independente do gasto — excluir ou corrigir um gasto antigo na revisão não deve apagar ou mudar um favorito.
 - "Repetir" funciona sem favoritar — gastos frequentes só por uma semana não devem poluir a lista de favoritos.
 - Data futura é aceita — não atrapalha e prepara para o planejamento que virá depois.
-- Categoria em uso é desativada ou trocada, nunca apagada sem destino — evita bagunçar gastos já registrados.
+- Categoria em uso é desativada ou trocada, nunca apagada sem destino — evita bagunçar gastos já registrados. Favoritos contam como uso e também são movidos na troca.
+- Categoria desativada não é levada ao repetir um gasto ou usar um favorito (o cadastro abre sem categoria e avisa) — evita criar gasto novo numa categoria que a pessoa abandonou.
+- O menu de três pontos concentra as ações de cada gasto, favorito e categoria — com várias ações, botões soltos tomavam a linha toda no celular e escondiam a descrição.
 
 ## Em aberto
+- Login — o sistema ainda não tem usuários; todas as telas usam um usuário padrão provisório (configurado em `config/midas.php`) — **Como seguir:** os dados já pertencem a um usuário, então o login pode chegar depois trocando o acesso das rotas por autenticação, sem migrar dados.
 - Lista inicial definitiva de categorias — a pessoa ainda não tem certeza — **Como seguir:** usar a lista provisória dos critérios, definida num único lugar para ser fácil trocar.
 
 ## Detalhes
