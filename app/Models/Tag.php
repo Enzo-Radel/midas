@@ -25,4 +25,9 @@ class Tag extends Model
     {
         return $this->belongsToMany(Expense::class);
     }
+
+    public function favorites(): BelongsToMany
+    {
+        return $this->belongsToMany(Favorite::class);
+    }
 }

@@ -4,6 +4,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ExampleController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\FavoriteController;
+use App\Http\Controllers\TagController;
 use App\Http\Middleware\UseDefaultUser;
 use Illuminate\Support\Facades\Route;
 
@@ -23,6 +24,9 @@ Route::middleware(UseDefaultUser::class)->group(function () {
     Route::post('/categorias/{category}/desativar', [CategoryController::class, 'deactivate'])->name('categories.deactivate');
     Route::post('/categorias/{category}/reativar', [CategoryController::class, 'reactivate'])->name('categories.reactivate');
     Route::delete('/categorias/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
+    Route::get('/tags', [TagController::class, 'index'])->name('tags.index');
+    Route::put('/tags/{tag}', [TagController::class, 'update'])->name('tags.update');
+    Route::delete('/tags/{tag}', [TagController::class, 'destroy'])->name('tags.destroy');
     Route::get('/favoritos', [FavoriteController::class, 'index'])->name('favorites.index');
     Route::get('/favoritos/{favorite}/editar', [FavoriteController::class, 'edit'])->name('favorites.edit');
     Route::put('/favoritos/{favorite}', [FavoriteController::class, 'update'])->name('favorites.update');

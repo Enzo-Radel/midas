@@ -19,16 +19,14 @@ const inUse = (category) => category.expenses_count + category.favorites_count >
 
 const plural = (count, one, many) => `${count} ${count === 1 ? one : many}`;
 
-const usage = (category) => {
-    if (!inUse(category)) return 'Não está em uso';
+const usageParts = (category) => [
+    category.expenses_count > 0 ? plural(category.expenses_count, 'gasto', 'gastos') : null,
+    category.favorites_count > 0 ? plural(category.favorites_count, 'favorito', 'favoritos') : null,
+].filter(Boolean);
 
-    return [
-        category.expenses_count > 0 ? plural(category.expenses_count, 'gasto', 'gastos') : null,
-        category.favorites_count > 0 ? plural(category.favorites_count, 'favorito', 'favoritos') : null,
-    ]
-        .filter(Boolean)
-        .join(' · ');
-};
+// Para a lista ("2 gastos · 1 favorito") e para frases ("2 gastos e 1 favorito").
+const usage = (category) => (inUse(category) ? usageParts(category).join(' · ') : 'Não está em uso');
+const usageSentence = (category) => usageParts(category).join(' e ');
 
 // Diálogo aberto: exclusão de categoria sem uso, ou de categoria em uso (que precisa dizer para
 // onde vão os gastos e favoritos dela, ou ser apenas desativada).
@@ -84,9 +82,9 @@ const dialogMessage = () => {
 
     const { type, category } = dialog.value;
 
-    if (type === 'delete') return `A categoria ${category.name} não está em uso e será removida.`;
+    if (type === 'delete') return `A categoria "${category.name}" não está em uso e será removida.`;
 
-    return `${category.name} é usada em ${usage(category)}. Para excluí-la, escolha para onde eles vão.`;
+    return `A categoria "${category.name}" é usada em ${usageSentence(category)}. Para excluí-la, escolha para onde eles vão.`;
 };
 
 const deactivate = (category) => router.post(`/categorias/${category.id}/desativar`, {}, { preserveScroll: true });
@@ -125,6 +123,8 @@ const saveRename = (category) => {
     renameForm.put(`/categorias/${category.id}`, {
         preserveScroll: true,
         onSuccess: () => cancelRename(),
+        // O botão Salvar é desabilitado durante o envio e o foco se perde; volta para o campo com o erro.
+        onError: () => nextTick(() => renameInput.value?.[0]?.focus()),
     });
 };
 </script>

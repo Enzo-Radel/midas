@@ -69,7 +69,7 @@ Itens levantados pelo revisor automático que não foram corrigidos na etapa e f
 - [ ] **Nome do favorito não acompanha a descrição** — depois de criado, mudar a descrição não muda o nome (e vice-versa). Decidir se, ao editar, o nome deveria acompanhar a descrição enquanto ele for igual a ela.
 
 ## Etapa 11 — Criar e renomear categorias
-- [ ] **Três botões no cabeçalho da lista de despesas** — "Categorias", "Favoritos" e "Novo gasto" quebram em duas linhas no celular, e gerenciar categorias é uma ação rara com o mesmo peso visual de "Favoritos". Decidir junto com o ponto da etapa 09 (entrada no menu lateral, ou só ícones no celular). Os formulários de gasto também não têm atalho para criar categoria.
+- [x] **Três botões no cabeçalho da lista de despesas** — resolvido na etapa 15 (linha de atalhos). Ainda sem entrada no menu lateral e sem atalho para criar categoria nos formulários de gasto.
 - [ ] **Foco depois de salvar ou cancelar a renomeação** — o campo some e o foco cai no corpo da página; o encadeamento "fechar menu e focar o campo" depende da ordem (`close()` e depois `nextTick`). Vale um teste no teclado.
 - [ ] **Nomes que só diferem por espaços internos ou normalização Unicode** — "Casa  Nova" e "Casa Nova" contam como diferentes. A análise não pede; só uma observação.
 - [ ] **Menu de três pontos com um único item** — custa dois toques por ação até as etapas 12 a 14 acrescentarem Excluir e Desativar; reavaliar se a ordem das etapas mudar.
@@ -95,3 +95,9 @@ Itens levantados pelo revisor automático que não foram corrigidos na etapa e f
 - [ ] **Esc com o seletor aberto fecha o diálogo inteiro** — é o comportamento padrão do navegador, mas pode surpreender.
 - [ ] **Testes dependem da ordem e do número de categorias iniciais** — `test_after_the_swap...` assume 7 categorias e `categories.0` = "Alimentação"; se a lista inicial ou a ordem mudarem, quebra por motivo alheio.
 - [ ] **Troca para destino inválido não recarrega a lista** — o aviso aparece, mas a lista de destinos só atualiza na próxima navegação.
+
+## Etapa 15 — Gerenciar tags
+- [ ] **Atalhos da lista de despesas não destacam a página atual** — sem `aria-current` nem destaque; a linha de atalhos só existe na lista de despesas. Decidir se vale repetir a navegação nas telas de favoritos, categorias e tags.
+- [ ] **A regra de nome único compartilhada não tem teste próprio** — é coberta pelos testes de categorias e de tags; baixo risco.
+- [ ] **Tela de tags não cria tags** — por decisão da análise elas nascem no formulário de gasto; decidir se vale um campo "Nova tag" na tela, como nas categorias.
+- [ ] **Quarta tela com CSS de botões/campos copiado** — Tags, Categorias, Favoritos e Despesas repetem estilos; vale extrair componentes compartilhados (ver o ponto da etapa 01).

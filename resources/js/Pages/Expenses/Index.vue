@@ -2,7 +2,7 @@
 import { ref } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { faPlus, faStar, faTags } from '@fortawesome/free-solid-svg-icons';
+import { faFolder, faPlus, faStar, faTag } from '@fortawesome/free-solid-svg-icons';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import ConfirmDialog from '../../Components/ConfirmDialog.vue';
 import ExpenseActionsMenu from '../../Components/ExpenseActionsMenu.vue';
@@ -36,21 +36,26 @@ const confirmDelete = () => {
         <div class="page">
             <div class="page-header">
                 <h1 class="page-title">Despesas</h1>
-                <div class="page-actions">
-                    <Link href="/categorias" class="button button-secondary">
-                        <FontAwesomeIcon :icon="faTags" />
-                        <span>Categorias</span>
-                    </Link>
-                    <Link href="/favoritos" class="button button-secondary">
-                        <FontAwesomeIcon :icon="faStar" />
-                        <span>Favoritos</span>
-                    </Link>
-                    <Link href="/despesas/nova" class="button button-primary">
-                        <FontAwesomeIcon :icon="faPlus" />
-                        <span>Novo gasto</span>
-                    </Link>
-                </div>
+                <Link href="/despesas/nova" class="button button-primary">
+                    <FontAwesomeIcon :icon="faPlus" />
+                    <span>Novo gasto</span>
+                </Link>
             </div>
+
+            <nav class="shortcuts" aria-label="Atalhos">
+                <Link href="/favoritos" class="shortcut">
+                    <FontAwesomeIcon :icon="faStar" />
+                    <span>Favoritos</span>
+                </Link>
+                <Link href="/categorias" class="shortcut">
+                    <FontAwesomeIcon :icon="faFolder" />
+                    <span>Categorias</span>
+                </Link>
+                <Link href="/tags" class="shortcut">
+                    <FontAwesomeIcon :icon="faTag" />
+                    <span>Tags</span>
+                </Link>
+            </nav>
 
             <div v-if="days.length === 0" class="empty">
                 <p class="empty-title">Nenhum gasto registrado ainda</p>
@@ -134,29 +139,42 @@ const confirmDelete = () => {
     transition: all 0.2s ease;
 }
 
-.page-actions {
+.shortcuts {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.75rem;
+    gap: 0.375rem;
+    margin: -0.5rem 0 1.5rem;
 }
 
-.button-secondary {
-    background-color: white;
+.shortcut {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: 44px;
+    padding: 0 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
     color: #374151;
+    text-decoration: none;
+    background-color: white;
     border: 1px solid #d1d5db;
+    border-radius: 8px;
+    transition: all 0.2s ease;
 }
 
-.button-secondary:hover {
-    background-color: #f3f4f6;
-    border-color: #9ca3af;
+.shortcut:hover {
+    color: #4f46e5;
+    background-color: #eef2ff;
+    border-color: #c7d2fe;
     transform: translateY(-2px);
 }
 
-.button-secondary:active {
+.shortcut:active {
+    background-color: #e0e7ff;
     transform: scale(0.98);
 }
 
-.button-secondary:focus-visible {
+.shortcut:focus-visible {
     outline: none;
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
 }
