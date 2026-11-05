@@ -21,7 +21,7 @@ Itens levantados pelo revisor automático que não foram corrigidos na etapa e f
 
 ## Etapa 04 — Excluir um gasto
 - [ ] **Falha na exclusão sem aviso** — se a requisição falhar (rede, sessão expirada), o diálogo fecha e o gasto continua na lista, sem mensagem de erro. Decidir se vale mostrar um aviso.
-- [ ] **Descrições truncadas no celular** — com valor e dois botões de 44px na mesma linha, descrições ficam bem curtas em tela estreita (ex.: "Sem descri..."). Decidir se as ações viram um menu, ou vão para uma segunda linha. Vale olhar no seu celular; o problema cresce se entrarem categoria, tags e "repetir"/"favoritar" nas próximas etapas.
+- [x] **Descrições truncadas no celular** — resolvido na etapa 07: as ações viraram um menu de três pontos. Vale só confirmar no seu celular.
 - [ ] **Diálogo de confirmação sem teste automatizado** — confirmação e cancelamento verificados só no navegador (sem teste de componente no projeto).
 
 ## Etapa 05 — Categoria no gasto
@@ -29,7 +29,7 @@ Itens levantados pelo revisor automático que não foram corrigidos na etapa e f
 - [ ] **Sem índice único em nome de categoria** — duas primeiras visitas simultâneas podem duplicar as categorias iniciais, e nada impede nomes repetidos no banco (a regra é só na tela, etapa 11). Decidir se vale um índice único `(user_id, nome)`.
 - [ ] **Migração de preenchimento sem teste automatizado** — verificada manualmente em banco com dois usuários; a suíte roda as migrações sem usuários.
 - [ ] **Teste da lista inicial compara com texto fixo** — quando a lista provisória mudar, o teste muda junto. Decidir se vale comparar com `config('midas.default_categories')`.
-- [ ] **Truncamento no celular** — a etiqueta de categoria abaixo da descrição aumenta a altura da linha; ver junto com o ponto da etapa 04.
+- [x] **Truncamento no celular** — resolvido pelo menu de ações (etapa 07).
 
 ## Etapa 06 — Tags no gasto
 - [ ] **Tag duplicada em salvamentos simultâneos** — a regra "sem tags de mesmo nome" é feita no código (ler e depois criar), sem índice único no banco; dois salvamentos ao mesmo tempo (clique duplo, duas abas) com a mesma tag nova podem criar duas. Mesmo ponto das categorias. Decidir se vale um índice único `(user_id, nome)` (no MySQL costuma ignorar maiúsculas; no SQLite dos testes não).
@@ -38,3 +38,9 @@ Itens levantados pelo revisor automático que não foram corrigidos na etapa e f
 - [ ] **Erro do campo de tags sem `aria-describedby`** — como nos outros campos do formulário; decidir se vale ligar as mensagens de erro aos campos em todo o formulário.
 - [ ] **Índice em `expense_tag.tag_id`** — as etapas 14 e 15 vão renomear e excluir tags; vale conferir se a consulta por tag precisa de índice.
 - [ ] **Atualizar um gasto sem enviar `tags` remove todas as tags** — é o comportamento adotado (campo ausente = nenhuma tag); confirmar que é o desejado se um dia houver outro cliente além da tela.
+
+## Etapa 07 — Repetir um gasto
+- [ ] **Menu de ações sempre abre para baixo** — no último gasto de uma lista longa, ou perto do fim da tela, o menu pode exigir rolagem. Hoje cabe (menu de 3 itens); fica mais apertado com "Favoritar". Decidir se vale abrir para cima quando faltar espaço.
+- [ ] **Foco após excluir** — depois de confirmar a exclusão o foco cai no corpo da página (o botão some com o gasto). Decidir se vale levá-lo ao gasto seguinte ou ao título da lista.
+- [ ] **Montagem dos dados do gasto repetida no controller** — o valor em texto, a categoria e as tags são montados em `edit` e `repeat` (e voltarão a ser na etapa 08, favoritos). Decidir se vale extrair um método único.
+- [ ] **Menu e repetir sem teste automatizado** — verificados só no navegador (sem teste de componente no projeto).

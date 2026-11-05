@@ -47,6 +47,26 @@ class ExpenseController extends Controller
         ]);
     }
 
+    /**
+     * Abre o cadastro preenchido com os dados de um gasto existente. Não grava nada;
+     * a data não é levada, o cadastro usa a de hoje.
+     */
+    public function repeat(Request $request, Expense $expense): Response
+    {
+        $this->authorizeOwner($request, $expense);
+
+        return Inertia::render('Expenses/Create', [
+            'prefill' => [
+                'amount' => number_format($expense->amount / 100, 2, '.', ''),
+                'description' => $expense->description,
+                'category_id' => $expense->category_id,
+                'tags' => $expense->tags()->orderBy('name')->pluck('name'),
+            ],
+            'categories' => $this->categoriesFor($request),
+            'tags' => $this->tagNamesFor($request),
+        ]);
+    }
+
     public function store(ExpenseRequest $request): RedirectResponse
     {
         DB::transaction(function () use ($request) {

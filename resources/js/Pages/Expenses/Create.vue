@@ -3,6 +3,11 @@ import AppLayout from '../../Layouts/AppLayout.vue';
 import ExpenseForm from '../../Components/ExpenseForm.vue';
 
 defineProps({
+    /** Dados de um gasto a repetir; ausente no cadastro em branco. */
+    prefill: {
+        type: Object,
+        default: null,
+    },
     categories: {
         type: Array,
         required: true,
@@ -17,8 +22,8 @@ defineProps({
 <template>
     <AppLayout>
         <div class="page">
-            <h1 class="page-title">Novo gasto</h1>
-            <ExpenseForm :categories="categories" :tags="tags" />
+            <h1 class="page-title">{{ prefill ? 'Repetir gasto' : 'Novo gasto' }}</h1>
+            <ExpenseForm :prefill="prefill" :categories="categories" :tags="tags" />
         </div>
     </AppLayout>
 </template>

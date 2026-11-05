@@ -16,6 +16,11 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    /** Dados de um gasto a repetir: preenchem o cadastro, que segue criando um gasto novo com a data de hoje. */
+    prefill: {
+        type: Object,
+        default: null,
+    },
     /** Nomes das tags que já existem, para sugerir. */
     tags: {
         type: Array,
@@ -23,12 +28,15 @@ const props = defineProps({
     },
 });
 
+// Edição e repetição começam dos dados de um gasto; só a edição leva a data dele.
+const source = props.expense ?? props.prefill;
+
 const form = useForm({
-    amount: props.expense ? toAmountInput(props.expense.amount) : '',
+    amount: source ? toAmountInput(source.amount) : '',
     date: props.expense?.date ?? todayIso(),
-    description: props.expense?.description ?? '',
-    category_id: props.expense?.category_id ?? '',
-    tags: [...(props.expense?.tags ?? [])],
+    description: source?.description ?? '',
+    category_id: source?.category_id ?? '',
+    tags: [...(source?.tags ?? [])],
 });
 
 const amountInput = ref(null);
@@ -91,9 +99,9 @@ const suggestions = computed(() => {
 
 const tagError = computed(() => Object.entries(form.errors).find(([key]) => key === 'tags' || key.startsWith('tags.'))?.[1]);
 
-// Só no cadastro: na edição, abrir o teclado sem necessidade atrapalha no celular.
+// Só no cadastro em branco: na edição e na repetição, abrir o teclado sem necessidade atrapalha no celular.
 onMounted(() => {
-    if (!props.expense) amountInput.value?.focus();
+    if (!source) amountInput.value?.focus();
 });
 
 const submit = () => {
