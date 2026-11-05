@@ -211,10 +211,13 @@ const submit = () => {
             >
                 <option value="">Sem categoria</option>
                 <option v-for="category in categories" :key="category.id" :value="category.id">
-                    {{ category.name }}
+                    {{ category.name }}{{ category.active === false ? ' (desativada)' : '' }}
                 </option>
             </select>
             <p v-if="form.errors.category_id" class="error">{{ form.errors.category_id }}</p>
+            <p v-else-if="prefill?.inactive_category" class="hint" role="alert">
+                A categoria "{{ prefill.inactive_category }}" está desativada e não foi aplicada. Escolha outra, se quiser.
+            </p>
         </div>
 
         <div class="field">

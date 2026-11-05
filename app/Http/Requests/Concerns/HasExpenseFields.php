@@ -22,9 +22,20 @@ trait HasExpenseFields
             'category_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('categories', 'id')->where('user_id', $this->user()->id),
+                // Só categorias do usuário e ativas; a que o gasto/favorito já usa continua valendo.
+                Rule::exists('categories', 'id')->where(fn ($query) => $query
+                    ->where('user_id', $this->user()->id)
+                    ->where(fn ($q) => $q->where('active', true)->orWhere('id', $this->currentCategoryId()))),
             ],
         ];
+    }
+
+    /**
+     * Categoria que o gasto ou favorito em edição já usa (pode estar desativada); nulo no cadastro.
+     */
+    protected function currentCategoryId(): ?int
+    {
+        return null;
     }
 
     /**

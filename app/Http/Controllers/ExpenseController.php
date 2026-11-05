@@ -97,7 +97,7 @@ class ExpenseController extends Controller
                 'tags' => $expense->tags()->orderBy('name')->pluck('name'),
                 'favorited' => $expense->favorite()->exists(),
             ],
-            'categories' => ExpenseFormData::categories($request->user()),
+            'categories' => ExpenseFormData::categories($request->user(), $expense->category_id),
             'tags' => ExpenseFormData::tagNames($request->user()),
         ]);
     }

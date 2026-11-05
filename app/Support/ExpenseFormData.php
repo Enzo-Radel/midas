@@ -14,11 +14,15 @@ use Illuminate\Support\Collection;
 class ExpenseFormData
 {
     /**
-     * Categorias do usuário, na ordem de criação.
+     * Categorias para escolher, na ordem de criação: só as ativas, mais a que o gasto ou favorito
+     * em edição já usa (`$keepId`), mesmo desativada, para ela permanecer até ser trocada.
      */
-    public static function categories(User $user): Collection
+    public static function categories(User $user, ?int $keepId = null): Collection
     {
-        return $user->categories()->orderBy('id')->get(['id', 'name']);
+        return $user->categories()
+            ->where(fn ($query) => $query->where('active', true)->when($keepId, fn ($q) => $q->orWhere('id', $keepId)))
+            ->orderBy('id')
+            ->get(['id', 'name', 'active']);
     }
 
     /**
@@ -41,14 +45,20 @@ class ExpenseFormData
      * Preenchimento do cadastro a partir de um gasto ou favorito. A data não é levada:
      * o cadastro sempre usa a de hoje.
      *
-     * @return array{amount: string, description: ?string, category_id: ?int, tags: Collection}
+     * Categoria desativada não é levada; `inactive_category` traz o nome dela para a tela avisar.
+     *
+     * @return array{amount: string, description: ?string, category_id: ?int, inactive_category: ?string, tags: Collection}
      */
     public static function prefill(Expense|Favorite $source): array
     {
+        $category = $source->category;
+        $inactive = $category !== null && ! $category->active;
+
         return [
             'amount' => self::amount($source->amount),
             'description' => $source->description,
-            'category_id' => $source->category_id,
+            'category_id' => $inactive ? null : $source->category_id,
+            'inactive_category' => $inactive ? $category->name : null,
             'tags' => $source->tags()->orderBy('name')->pluck('name'),
         ];
     }

@@ -26,6 +26,12 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    /** 'danger' para ações destrutivas (padrão); 'primary' para ações reversíveis. */
+    variant: {
+        type: String,
+        default: 'danger',
+        validator: (value) => ['danger', 'primary'].includes(value),
+    },
 });
 
 const emit = defineEmits(['confirm', 'cancel']);
@@ -111,7 +117,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                     </button>
                     <button
                         type="button"
-                        class="button button-danger"
+                        class="button"
+                        :class="variant === 'primary' ? 'button-primary' : 'button-danger'"
                         :disabled="processing"
                         @click="emit('confirm')"
                     >
@@ -185,6 +192,17 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 .button-secondary:hover:not(:disabled) {
     background-color: #f3f4f6;
     border-color: #9ca3af;
+}
+
+.button-primary {
+    background-color: #6366f1;
+    color: white;
+}
+
+.button-primary:hover:not(:disabled) {
+    background-color: #4f46e5;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    transform: translateY(-2px);
 }
 
 .button-danger {

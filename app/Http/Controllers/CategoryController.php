@@ -22,6 +22,7 @@ class CategoryController extends Controller
                 ->map(fn (Category $category) => [
                     'id' => $category->id,
                     'name' => $category->name,
+                    'active' => $category->active,
                     'expenses_count' => $category->expenses_count,
                     'favorites_count' => $category->favorites_count,
                 ]),
@@ -40,6 +41,28 @@ class CategoryController extends Controller
         abort_unless($category->user_id === $request->user()->id, 404);
 
         $category->update(['name' => $request->validated('name')]);
+
+        return redirect()->route('categories.index');
+    }
+
+    /**
+     * Desativa a categoria: deixa de ser oferecida para escolha, mas continua nos gastos e
+     * favoritos que já a usam.
+     */
+    public function deactivate(Request $request, Category $category): RedirectResponse
+    {
+        abort_unless($category->user_id === $request->user()->id, 404);
+
+        $category->update(['active' => false]);
+
+        return redirect()->route('categories.index');
+    }
+
+    public function reactivate(Request $request, Category $category): RedirectResponse
+    {
+        abort_unless($category->user_id === $request->user()->id, 404);
+
+        $category->update(['active' => true]);
 
         return redirect()->route('categories.index');
     }

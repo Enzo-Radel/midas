@@ -31,4 +31,9 @@ class ExpenseRequest extends FormRequest
             'favorite.boolean' => 'O valor de favorito é inválido.',
         ];
     }
+
+    protected function currentCategoryId(): ?int
+    {
+        return $this->route('expense')?->category_id;
+    }
 }

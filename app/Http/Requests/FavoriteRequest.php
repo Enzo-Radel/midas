@@ -28,4 +28,9 @@ class FavoriteRequest extends FormRequest
             'name.max' => 'O nome pode ter no máximo 255 caracteres.',
         ];
     }
+
+    protected function currentCategoryId(): ?int
+    {
+        return $this->route('favorite')?->category_id;
+    }
 }

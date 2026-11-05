@@ -80,3 +80,11 @@ Itens levantados pelo revisor automático que não foram corrigidos na etapa e f
 - [ ] **Travamento só garantido no MySQL** — a transação com `lockForUpdate` protege contra um gasto usar a categoria durante a exclusão no MySQL; no SQLite dos testes o travamento não tem efeito e não há teste desse cenário. Alternativa mais robusta: `restrictOnDelete` nas duas chaves (ver o ponto da etapa 05, decidir na etapa 14).
 - [ ] **Aviso de erro no topo da tela de categorias** — com uma lista longa e a rolagem preservada, o aviso pode ficar fora da vista; só aparece com a tela desatualizada.
 - [ ] **"Cancelar não muda nada" e "Excluir oculto" sem teste automatizado** — verificados só no navegador (sem teste de componente no projeto).
+
+## Etapa 13 — Desativar e reativar categoria
+- [ ] **Categoria desativada e em uso não tem "Excluir" no menu** — a etapa 14 ("excluir e trocar") precisa estar disponível também para ela; decidir lá se "Excluir" aparece para toda categoria em uso, em qualquer estado.
+- [ ] **"Desativar" e "Excluir" levam ao mesmo lugar para categoria ativa em uso** — a ação aparece duas vezes e "Excluir" nunca exclui; a etapa 14 deve trocar o diálogo (oferecendo excluir com troca além de desativar).
+- [ ] **Testes dependem de "8 categorias" iniciais** — vários testes contam `has('categories', 8)`/`7`; se a lista inicial mudar, eles quebram. Derivar a contagem do banco.
+- [ ] **Desativar e reativar sem estado de processamento** — clique duplo dispara duas requisições (idempotentes, sem efeito); nenhuma falha de rede é avisada.
+- [ ] **Aviso ao repetir só aparece na carga da tela** — some se houver erro de validação na categoria depois; aceitável.
+- [ ] **Fluxo do diálogo "em uso" e o menu condicional sem teste automatizado** — verificados só no navegador.

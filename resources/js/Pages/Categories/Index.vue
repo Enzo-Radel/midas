@@ -2,7 +2,7 @@
 import { nextTick, ref } from 'vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { faArrowLeft, faPen, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faEye, faEyeSlash, faPen, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import ActionMenu from '../../Components/ActionMenu.vue';
 import ConfirmDialog from '../../Components/ConfirmDialog.vue';
@@ -30,18 +30,50 @@ const usage = (category) => {
         .join(' · ');
 };
 
-const categoryToDelete = ref(null);
-const deleting = ref(false);
+// Diálogo aberto: exclusão de categoria sem uso, ou aviso de que uma categoria em uso não pode
+// ser excluída (com a opção de desativá-la).
+const dialog = ref(null); // { type: 'delete' | 'in-use', category }
+const working = ref(false);
 
-const confirmDelete = () => {
-    router.delete(`/categorias/${categoryToDelete.value.id}`, {
+const askDelete = (category) => {
+    dialog.value = { type: inUse(category) ? 'in-use' : 'delete', category };
+};
+
+const closeDialog = () => {
+    dialog.value = null;
+};
+
+const request = (method, url) => {
+    router[method](url, {}, {
         preserveScroll: true,
-        onStart: () => (deleting.value = true),
+        onStart: () => (working.value = true),
         onFinish: () => {
-            deleting.value = false;
-            categoryToDelete.value = null;
+            working.value = false;
+            closeDialog();
         },
     });
+};
+
+const confirmDialog = () => {
+    const { type, category } = dialog.value;
+
+    if (type === 'delete') request('delete', `/categorias/${category.id}`);
+    else request('post', `/categorias/${category.id}/desativar`);
+};
+
+const deactivate = (category) => router.post(`/categorias/${category.id}/desativar`, {}, { preserveScroll: true });
+const reactivate = (category) => router.post(`/categorias/${category.id}/reativar`, {}, { preserveScroll: true });
+
+const dialogTitle = () => (dialog.value?.type === 'delete' ? 'Excluir esta categoria?' : 'Esta categoria está em uso');
+
+const dialogMessage = () => {
+    if (!dialog.value) return '';
+
+    const { type, category } = dialog.value;
+
+    if (type === 'delete') return `A categoria ${category.name} não está em uso e será removida.`;
+
+    return `${category.name} é usada em ${usage(category)} e por isso não pode ser excluída. Você pode desativá-la: ela deixa de aparecer para escolha, mas continua nos gastos e favoritos que já a usam.`;
 };
 
 const createForm = useForm({ name: '' });
@@ -142,8 +174,11 @@ const saveRename = (category) => {
                     </form>
 
                     <template v-else>
-                        <span class="info">
-                            <span class="name">{{ category.name }}</span>
+                        <span class="info" :class="{ 'info-inactive': !category.active }">
+                            <span class="name">
+                                {{ category.name }}
+                                <span v-if="!category.active" class="badge">Desativada</span>
+                            </span>
                             <span class="usage">{{ usage(category) }}</span>
                         </span>
                         <ActionMenu :label="`Ações da categoria: ${category.name}`">
@@ -153,11 +188,25 @@ const saveRename = (category) => {
                                     <span>Renomear</span>
                                 </button>
                                 <button
-                                    v-if="!inUse(category)"
+                                    v-if="category.active"
+                                    type="button"
+                                    class="menu-item"
+                                    role="menuitem"
+                                    @click="close(); deactivate(category)"
+                                >
+                                    <FontAwesomeIcon class="menu-icon" :icon="faEyeSlash" />
+                                    <span>Desativar</span>
+                                </button>
+                                <button v-else type="button" class="menu-item" role="menuitem" @click="close(); reactivate(category)">
+                                    <FontAwesomeIcon class="menu-icon" :icon="faEye" />
+                                    <span>Reativar</span>
+                                </button>
+                                <button
+                                    v-if="!inUse(category) || category.active"
                                     type="button"
                                     class="menu-item menu-item-danger"
                                     role="menuitem"
-                                    @click="close(); categoryToDelete = category"
+                                    @click="close(); askDelete(category)"
                                 >
                                     <FontAwesomeIcon class="menu-icon" :icon="faTrash" />
                                     <span>Excluir</span>
@@ -170,13 +219,14 @@ const saveRename = (category) => {
         </div>
 
         <ConfirmDialog
-            :open="categoryToDelete !== null"
-            title="Excluir esta categoria?"
-            :message="categoryToDelete ? `A categoria ${categoryToDelete.name} não está em uso e será removida.` : ''"
-            confirm-label="Excluir"
-            :processing="deleting"
-            @confirm="confirmDelete"
-            @cancel="categoryToDelete = null"
+            :open="dialog !== null"
+            :title="dialogTitle()"
+            :message="dialogMessage()"
+            :confirm-label="dialog?.type === 'delete' ? 'Excluir' : 'Desativar'"
+            :variant="dialog?.type === 'delete' ? 'danger' : 'primary'"
+            :processing="working"
+            @confirm="confirmDialog"
+            @cancel="closeDialog"
         />
     </AppLayout>
 </template>
@@ -397,6 +447,21 @@ const saveRename = (category) => {
     font-weight: 500;
     color: #1f2937;
     overflow-wrap: anywhere;
+}
+
+.info-inactive .name {
+    color: #6b7280;
+}
+
+.badge {
+    display: inline-block;
+    margin-left: 0.5rem;
+    padding: 0.125rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #92400e;
+    background-color: #fef3c7;
+    border-radius: 8px;
 }
 
 .usage {

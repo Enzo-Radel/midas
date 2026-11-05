@@ -66,7 +66,7 @@ class FavoriteController extends Controller
                 'category_id' => $favorite->category_id,
                 'tags' => $favorite->tags()->orderBy('name')->pluck('name'),
             ],
-            'categories' => ExpenseFormData::categories($request->user()),
+            'categories' => ExpenseFormData::categories($request->user(), $favorite->category_id),
             'tags' => ExpenseFormData::tagNames($request->user()),
         ]);
     }

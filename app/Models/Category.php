@@ -13,8 +13,16 @@ class Category extends Model
      */
     protected $fillable = [
         'name',
+        'active',
         'user_id',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'active' => 'boolean',
+        ];
+    }
 
     public function user(): BelongsTo
     {
