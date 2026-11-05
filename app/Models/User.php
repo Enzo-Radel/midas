@@ -72,6 +72,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the favorites for the user.
+     */
+    public function favorites(): HasMany
+    {
+        return $this->hasMany(Favorite::class);
+    }
+
+    /**
      * Cria as categorias iniciais definidas em config/midas.php.
      */
     public function createDefaultCategories(): void

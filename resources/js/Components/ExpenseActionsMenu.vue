@@ -1,8 +1,8 @@
 <script setup>
 import { nextTick, onBeforeUnmount, ref, useId, watch } from 'vue';
-import { Link } from '@inertiajs/vue3';
+import { Link, router } from '@inertiajs/vue3';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { faClone, faEllipsisVertical, faPen, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faClone, faEllipsisVertical, faPen, faStar, faTrash } from '@fortawesome/free-solid-svg-icons';
 
 const props = defineProps({
     expense: {
@@ -78,6 +78,20 @@ onBeforeUnmount(() => {
     document.removeEventListener('keydown', onKeydown);
 });
 
+// Favoritar e desfavoritar são imediatos e mantêm a posição na lista.
+const toggleFavorite = () => {
+    close();
+    trigger.value?.focus();
+
+    const url = `/despesas/${props.expense.id}/favorito`;
+
+    if (props.expense.favorited) {
+        router.delete(url, { preserveScroll: true });
+    } else {
+        router.post(url, {}, { preserveScroll: true });
+    }
+};
+
 const remove = () => {
     // O item do menu some ao fechar; o foco volta ao botão do menu para o diálogo poder devolvê-lo.
     close();
@@ -110,6 +124,10 @@ const remove = () => {
                 <FontAwesomeIcon class="menu-icon" :icon="faClone" />
                 <span>Repetir</span>
             </Link>
+            <button type="button" class="menu-item" role="menuitem" @click="toggleFavorite">
+                <FontAwesomeIcon class="menu-icon" :icon="faStar" />
+                <span>{{ expense.favorited ? 'Desfavoritar' : 'Favoritar' }}</span>
+            </button>
             <button type="button" class="menu-item menu-item-danger" role="menuitem" @click="remove">
                 <FontAwesomeIcon class="menu-icon" :icon="faTrash" />
                 <span>Excluir</span>

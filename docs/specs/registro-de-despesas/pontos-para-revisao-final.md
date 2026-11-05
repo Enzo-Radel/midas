@@ -44,3 +44,12 @@ Itens levantados pelo revisor automático que não foram corrigidos na etapa e f
 - [ ] **Foco após excluir** — depois de confirmar a exclusão o foco cai no corpo da página (o botão some com o gasto). Decidir se vale levá-lo ao gasto seguinte ou ao título da lista.
 - [ ] **Montagem dos dados do gasto repetida no controller** — o valor em texto, a categoria e as tags são montados em `edit` e `repeat` (e voltarão a ser na etapa 08, favoritos). Decidir se vale extrair um método único.
 - [ ] **Menu e repetir sem teste automatizado** — verificados só no navegador (sem teste de componente no projeto).
+
+## Etapa 08 — Favoritar um gasto
+- [ ] **Etapas 12 a 15 precisam tratar favoritos** — o favorito aponta para as mesmas categorias e tags do usuário: renomear aparece nele (bom), mas excluir uma tag apaga o vínculo em silêncio e excluir uma categoria deixa o favorito sem categoria. A exclusão com troca (etapa 14) e a de tags (etapa 15) devem reatribuir também os favoritos e ter teste para isso; as contagens de uso vão precisar de `Tag::favorites` e `Category::favorites`.
+- [ ] **Exibição do favorito sem descrição** — o nome fica vazio e o valor e a categoria são guardados; a regra de exibição ("valor e categoria") fica para a lista de favoritos (etapa 09). Conferir lá.
+- [ ] **Desfavoritar apaga o favorito mesmo se ele foi renomeado/editado** (a partir da etapa 10) — bate com "remover", mas vale confirmar se um aviso é desejado.
+- [ ] **Texto da opção "Salvar nos favoritos"** — não diz que editar o gasto depois não atualiza o favorito. Decidir se vale esclarecer.
+- [ ] **Sem aviso do resultado de favoritar/desfavoritar** — o menu fecha e só a estrela muda; não há anúncio para leitor de tela nem aviso de falha da requisição (mesmo ponto da exclusão, etapa 04).
+- [ ] **Menu com 4 itens** — o ponto "menu abre sempre para baixo" (etapa 07) fica mais relevante; olhar o último gasto de uma lista longa no celular.
+- [ ] **Estrela lida por leitor de tela** — o ícone usa `title="Favorito"`; confirmar num leitor de tela, ou trocar por texto visualmente oculto.

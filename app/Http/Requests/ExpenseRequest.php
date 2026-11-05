@@ -16,6 +16,7 @@ class ExpenseRequest extends FormRequest
             'amount' => ['required', 'numeric', 'decimal:0,2', 'gt:0', 'max:99999999.99'],
             'date' => ['required', 'date_format:Y-m-d'],
             'description' => ['nullable', 'string', 'max:255'],
+            'favorite' => ['nullable', 'boolean'],
             'tags' => ['nullable', 'array', 'max:20'],
             'tags.*' => ['required', 'string', 'max:50'],
             'category_id' => [
@@ -39,6 +40,7 @@ class ExpenseRequest extends FormRequest
             'amount.max' => 'O valor é grande demais.',
             'date.required' => 'Informe a data.',
             'date.date_format' => 'Informe uma data válida.',
+            'favorite.boolean' => 'O valor de favorito é inválido.',
             'tags.array' => 'As tags estão em um formato inválido.',
             'tags.max' => 'Use no máximo 20 tags por gasto.',
             'tags.*.required' => 'Uma tag não pode ficar em branco.',

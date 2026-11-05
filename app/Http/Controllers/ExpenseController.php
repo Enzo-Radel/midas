@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ExpenseRequest;
 use App\Models\Expense;
 use App\Models\Tag;
+use App\Services\ExpenseFavorites;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
@@ -19,6 +20,7 @@ class ExpenseController extends Controller
     {
         $days = $request->user()->expenses()
             ->with(['category', 'tags'])
+            ->withExists('favorite')
             ->orderByDesc('date')
             ->orderByDesc('id')
             ->get()
@@ -32,6 +34,7 @@ class ExpenseController extends Controller
                     'description' => $expense->description,
                     'category' => $expense->category?->name,
                     'tags' => $expense->tags->pluck('name')->sort(SORT_NATURAL | SORT_FLAG_CASE)->values(),
+                    'favorited' => $expense->favorite_exists,
                 ])->values(),
             ])
             ->values();
@@ -67,9 +70,9 @@ class ExpenseController extends Controller
         ]);
     }
 
-    public function store(ExpenseRequest $request): RedirectResponse
+    public function store(ExpenseRequest $request, ExpenseFavorites $favorites): RedirectResponse
     {
-        DB::transaction(function () use ($request) {
+        DB::transaction(function () use ($request, $favorites) {
             $expense = $request->user()->expenses()->create([
                 'amount' => $request->amountInCents(),
                 'date' => $request->validated('date'),
@@ -78,6 +81,7 @@ class ExpenseController extends Controller
             ]);
 
             $this->syncTags($request, $expense);
+            $this->syncFavorite($request, $expense, $favorites);
         });
 
         return redirect()->route('expenses.index');
@@ -95,17 +99,18 @@ class ExpenseController extends Controller
                 'description' => $expense->description,
                 'category_id' => $expense->category_id,
                 'tags' => $expense->tags()->orderBy('name')->pluck('name'),
+                'favorited' => $expense->favorite()->exists(),
             ],
             'categories' => $this->categoriesFor($request),
             'tags' => $this->tagNamesFor($request),
         ]);
     }
 
-    public function update(ExpenseRequest $request, Expense $expense): RedirectResponse
+    public function update(ExpenseRequest $request, Expense $expense, ExpenseFavorites $favorites): RedirectResponse
     {
         $this->authorizeOwner($request, $expense);
 
-        DB::transaction(function () use ($request, $expense) {
+        DB::transaction(function () use ($request, $expense, $favorites) {
             $expense->update([
                 'amount' => $request->amountInCents(),
                 'date' => $request->validated('date'),
@@ -114,9 +119,28 @@ class ExpenseController extends Controller
             ]);
 
             $this->syncTags($request, $expense);
+            $this->syncFavorite($request, $expense, $favorites);
         });
 
         return redirect()->route('expenses.index');
+    }
+
+    public function favorite(Request $request, Expense $expense, ExpenseFavorites $favorites): RedirectResponse
+    {
+        $this->authorizeOwner($request, $expense);
+
+        $favorites->favorite($expense);
+
+        return back();
+    }
+
+    public function unfavorite(Request $request, Expense $expense, ExpenseFavorites $favorites): RedirectResponse
+    {
+        $this->authorizeOwner($request, $expense);
+
+        $favorites->unfavorite($expense);
+
+        return back();
     }
 
     public function destroy(Request $request, Expense $expense): RedirectResponse
@@ -126,6 +150,19 @@ class ExpenseController extends Controller
         $expense->delete();
 
         return redirect()->route('expenses.index');
+    }
+
+    /**
+     * Aplica a opção "favoritar" do formulário: marcada cria o favorito (uma cópia do gasto já
+     * com os dados salvos), desmarcada remove o favorito, ausente não muda nada.
+     */
+    private function syncFavorite(ExpenseRequest $request, Expense $expense, ExpenseFavorites $favorites): void
+    {
+        if ($request->input('favorite') === null) {
+            return;
+        }
+
+        $request->boolean('favorite') ? $favorites->favorite($expense) : $favorites->unfavorite($expense);
     }
 
     /**

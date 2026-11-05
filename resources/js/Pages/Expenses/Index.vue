@@ -2,7 +2,7 @@
 import { ref } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { faPlus } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faStar } from '@fortawesome/free-solid-svg-icons';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import ConfirmDialog from '../../Components/ConfirmDialog.vue';
 import ExpenseActionsMenu from '../../Components/ExpenseActionsMenu.vue';
@@ -58,8 +58,11 @@ const confirmDelete = () => {
                     <ul class="list">
                         <li v-for="expense in day.expenses" :key="expense.id" class="item">
                             <span class="item-main">
-                                <span class="item-description" :class="{ 'item-description-empty': !expense.description }">
-                                    {{ expense.description || 'Sem descrição' }}
+                                <span class="item-title">
+                                    <span class="item-description" :class="{ 'item-description-empty': !expense.description }">
+                                        {{ expense.description || 'Sem descrição' }}
+                                    </span>
+                                    <FontAwesomeIcon v-if="expense.favorited" class="item-star" :icon="faStar" title="Favorito" />
                                 </span>
                                 <span v-if="expense.category || expense.tags.length > 0" class="item-labels">
                                     <span v-if="expense.category" class="item-category">{{ expense.category }}</span>
@@ -217,6 +220,19 @@ const confirmDelete = () => {
     min-width: 0;
 }
 
+.item-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.item-star {
+    flex-shrink: 0;
+    font-size: 0.875rem;
+    color: #d97706;
+}
+
 .item-labels {
     display: flex;
     flex-wrap: wrap;
@@ -242,6 +258,7 @@ const confirmDelete = () => {
 }
 
 .item-description {
+    min-width: 0;
     font-weight: 500;
     color: #1f2937;
     overflow: hidden;

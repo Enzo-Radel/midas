@@ -37,6 +37,7 @@ const form = useForm({
     description: source?.description ?? '',
     category_id: source?.category_id ?? '',
     tags: [...(source?.tags ?? [])],
+    favorite: props.expense?.favorited ?? false,
 });
 
 const amountInput = ref(null);
@@ -221,6 +222,14 @@ const submit = () => {
             <p v-if="tagError" class="error">{{ tagError }}</p>
         </div>
 
+        <label class="check">
+            <input v-model="form.favorite" type="checkbox" class="check-input" />
+            <span class="check-text">
+                <span class="check-title">Salvar nos favoritos</span>
+                <span class="check-hint">Guarda uma cópia para repetir com um toque depois.</span>
+            </span>
+        </label>
+
         <div class="actions">
             <Link href="/despesas" class="button button-secondary">Cancelar</Link>
             <button type="submit" class="button button-primary" :disabled="form.processing">Salvar</button>
@@ -379,6 +388,59 @@ const submit = () => {
 .tag-add {
     flex-shrink: 0;
     padding: 0.75rem 1rem;
+}
+
+.check {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    min-height: 44px;
+    padding: 0.75rem 0.875rem;
+    cursor: pointer;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.check:hover {
+    background-color: #f9fafb;
+    border-color: #9ca3af;
+}
+
+.check:active {
+    background-color: #f3f4f6;
+}
+
+.check:focus-within {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.check-input {
+    flex-shrink: 0;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin: 0.125rem 0 0;
+    cursor: pointer;
+    accent-color: #6366f1;
+}
+
+.check-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+}
+
+.check-title {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #1f2937;
+}
+
+.check-hint {
+    font-size: 0.875rem;
+    color: #6b7280;
 }
 
 .actions {
